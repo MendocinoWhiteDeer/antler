@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   
 */
 
-#include "base.h"
+#include "antler.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -44,7 +44,7 @@ static const char* loggerColors[] =
   ANSI_COLOR_YELLOW, ANSI_COLOR_MAGENTA, ANSI_COLOR_RED
 };
 
-void AtlrLogMsg(AtlrLoggerType t, const char* format, ...)
+void atlrLogMsg(AtlrLoggerType t, const char* format, ...)
 {
   va_list args;
   va_start(args, format);
