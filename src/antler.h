@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
 
@@ -28,9 +29,11 @@ typedef double   AtlrF64;
 typedef struct AtlrInstance
 {
   VkInstance handle;
+  /*
 #ifdef ATLR_DEBUG
   VkDebugUtilsMessengerEXT debugMessenger;
 #endif
+  */
   GLFWwindow* window;
   VkAllocationCallbacks* allocator;
   

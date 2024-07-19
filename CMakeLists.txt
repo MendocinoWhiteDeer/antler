@@ -13,8 +13,7 @@ endif()
 message("Build type: ${CMAKE_BUILD_TYPE}")
 
 # compile flags
-set(CMAKE_C_FLAGS_DEBUG "-g -Wall")
-
+set(CMAKE_C_FLAGS_DEBUG "-g -Wall -DATLR_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 
 add_library(antler SHARED
