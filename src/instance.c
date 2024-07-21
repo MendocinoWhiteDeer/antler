@@ -161,7 +161,7 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
   return extensionsFound;
 }
 
-AtlrU8 initAtlrInstance(AtlrInstance* restrict instance,
+AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
 			const int width, const int height, const char* restrict name)
 {
   atlrLogMsg(LOG_INFO, "Initializing antler instance ...");
@@ -265,7 +265,7 @@ AtlrU8 initAtlrInstance(AtlrInstance* restrict instance,
   return 1;
 }
 
- void deinitAtlrInstance(AtlrInstance* restrict instance)
+ void atlrDeinitInstance(AtlrInstance* restrict instance)
  {
    atlrLogMsg(LOG_INFO, "Deinitializing antler instance ...");
 

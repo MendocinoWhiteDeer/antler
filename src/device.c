@@ -156,7 +156,7 @@ static void deinitSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict 
   free(support->presentModes);
 }
 
-void initAtlrDeviceCriteria(AtlrDeviceCriterion* restrict criteria)
+void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict criteria)
 {
   for (AtlrI32 i = 0; i < ATLR_DEVICE_CRITERION_TOT; i++)
   {
@@ -166,7 +166,7 @@ void initAtlrDeviceCriteria(AtlrDeviceCriterion* restrict criteria)
   }
 }
 
-AtlrU8 setAtlrDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType type, AtlrDeviceCriterionMethod method, AtlrI32 point_shift)
+AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType type, AtlrDeviceCriterionMethod method, AtlrI32 point_shift)
 {
   if (type >= ATLR_DEVICE_CRITERION_TOT) return 0;
   AtlrDeviceCriterion* criterion = criteria + type;
@@ -175,7 +175,7 @@ AtlrU8 setAtlrDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDevice
   return 1;
 }
 
-AtlrU8 initAtlrDevice(AtlrDevice* restrict device, const AtlrInstance* restrict instance, AtlrDeviceCriterion* restrict criteria)
+AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict instance, AtlrDeviceCriterion* restrict criteria)
 {
   atlrLogMsg(LOG_INFO, "Initializing antler device ...");
   
@@ -446,7 +446,7 @@ AtlrU8 initAtlrDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   return 1;
 }
 
-void deinitAtlrDevice(AtlrDevice* restrict device, const AtlrInstance* restrict instance)
+void atlrDeinitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict instance)
 {
   atlrLogMsg(LOG_INFO, "Deinitializing antler device ...");
 

@@ -32,8 +32,6 @@ typedef struct AtlrInstance
   GLFWwindow* window;
   VkAllocationCallbacks* allocator;
   VkSurfaceKHR surface;
-  AtlrU32 validationLayerCount;
-  const char** validationLayers;
   
 } AtlrInstance;
 
@@ -97,17 +95,37 @@ typedef struct AtlrDevice
   
 } AtlrDevice;
 
+typedef struct AtlrSingleRecordCommandContext
+{
+  VkCommandPool commandPool;
+  VkFence fence;
+  
+} AtlrSingleRecordCommandContext;
+
 //
 // Functions
 //
 
 void atlrLogMsg(AtlrLoggerType, const char* restrict format, ...);
 
-AtlrU8 initAtlrInstance(AtlrInstance* restrict,
+AtlrU8 atlrInitInstance(AtlrInstance* restrict,
 			const int width, const int height, const char* restrict name);
-void deinitAtlrInstance(AtlrInstance* restrict);
+void atlrDeinitInstance(AtlrInstance* restrict);
 
-void initAtlrDeviceCriteria(AtlrDeviceCriterion* restrict);
-AtlrU8 setAtlrDeviceCriterion(AtlrDeviceCriterion* restrict, AtlrDeviceCriterionType, AtlrDeviceCriterionMethod, AtlrI32 point_shift);
-AtlrU8 initAtlrDevice(AtlrDevice* restrict, const AtlrInstance* restrict, AtlrDeviceCriterion* restrict);
-void deinitAtlrDevice(AtlrDevice* restrict, const AtlrInstance* restrict);
+void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict);
+AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict, AtlrDeviceCriterionType, AtlrDeviceCriterionMethod, AtlrI32 point_shift);
+AtlrU8 atlrInitDevice(AtlrDevice* restrict, const AtlrInstance* restrict, AtlrDeviceCriterion* restrict);
+void atlrDeinitDevice(AtlrDevice* restrict, const AtlrInstance* restrict);
+
+AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags, const AtlrInstance* restrict, const AtlrDevice* restrict);
+void atlrDeinitCommandPool(const VkCommandPool, const AtlrInstance* restrict, const AtlrDevice* restrict);
+AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffers, AtlrU32 commandBufferCount, const VkCommandPool, const AtlrDevice*);
+AtlrU8 atlrBeginCommandRecording(const VkCommandBuffer, const VkCommandBufferUsageFlags);
+AtlrU8 atlrEndCommandRecording(const VkCommandBuffer);
+AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrInstance* restrict, const AtlrDevice* restrict);
+void atlrDeinitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrInstance* restrict, const AtlrDevice* restrict);
+
+AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict, const AtlrSingleRecordCommandContext* restrict, const AtlrDevice*);
+AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecordCommandContext* restrict, const AtlrDevice*);
+void atlrCommandSetViewport(const VkCommandBuffer, const float width, const float height);
+void atlrCommandSetScissor(const VkCommandBuffer, const VkExtent2D*);
