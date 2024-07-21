@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifdef ATLR_DEBUG
 
 static VkDebugUtilsMessengerEXT debugMessenger; // originally this was wrapped in a struct in a header file; DON'T DO THAT, CAUSES SEGFAULT!!
-static const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
+static const char* validationLayer = "VK_LAYER_KHRONOS_validation";
 
 static AtlrU8 isValidationLayerAvailable()
 {
@@ -42,7 +42,7 @@ static AtlrU8 isValidationLayerAvailable()
     }
 
   for (AtlrU32 i = 0; i < availableLayerCount; i++)
-      if (!strcmp(validationLayerName, availableLayers[i].layerName))
+      if (!strcmp(validationLayer, availableLayers[i].layerName))
 	{
 	  free(availableLayers);
 	  return 1;
@@ -211,7 +211,7 @@ AtlrU8 initAtlrInstance(AtlrInstance* restrict instance,
   }
   atlrLogMsg(LOG_DEBUG, "Vulkan validation layer is available.");
   instanceInfo.enabledLayerCount = 1;
-  instanceInfo.ppEnabledLayerNames = &validationLayerName;
+  instanceInfo.ppEnabledLayerNames = &validationLayer;
 
   VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
   initVkDebugUtilsMessengerCreateInfoEXT(&debugInfo);
@@ -242,6 +242,7 @@ AtlrU8 initAtlrInstance(AtlrInstance* restrict instance,
   if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->handle) != VK_SUCCESS)
   {
     atlrLogMsg(LOG_FATAL, "vkCreateInstance did not return VK_SUCCESS.");
+    free(extensions);
     return 0;
   }
 #ifdef ATLR_DEBUG
@@ -252,6 +253,12 @@ AtlrU8 initAtlrInstance(AtlrInstance* restrict instance,
     return 0;
   }
 #endif
+  if (glfwCreateWindowSurface(instance->handle, instance->window, instance->allocator, &instance->surface) != VK_SUCCESS)
+    {
+      atlrLogMsg(LOG_FATAL, "glfwCreateWindowSurface did not return VK_SUCCESS.");
+      free(extensions);
+      return 0;
+    }
 
   free(extensions);
   atlrLogMsg(LOG_INFO, "Done initializing antler instance.");
@@ -260,8 +267,9 @@ AtlrU8 initAtlrInstance(AtlrInstance* restrict instance,
 
  void deinitAtlrInstance(AtlrInstance* restrict instance)
  {
-   atlrLogMsg(LOG_INFO, "Deinitializing antler ...");
+   atlrLogMsg(LOG_INFO, "Deinitializing antler instance ...");
 
+   vkDestroySurfaceKHR(instance->handle, instance->surface, instance->allocator);
 #ifdef ATLR_DEBUG
    deinitDebugMessenger(instance);
 #endif

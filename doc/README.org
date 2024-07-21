@@ -2,7 +2,12 @@
 
 License: LGPL 3.0
 
-A convenience library for making graphics demos. Not ready for use.
+A convenience library for Vulkan graphics programming. Not ready for use.
+
+** Relevant Learning Materials
+
+https://vulkan-tutorial.com/
+https://docs.vulkan.org/guide/latest/vulkan_spec.html
 
 ** Dependencies
 *** Submodules

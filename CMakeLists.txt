@@ -18,7 +18,8 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 
 add_library(antler SHARED
   "src/logger.c"
-  "src/instance.c")
+  "src/instance.c"
+  "src/device.c")
 target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 # GLFW
