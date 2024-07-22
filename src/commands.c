@@ -174,6 +174,8 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer commandBuffer, const At
   vkWaitForFences(device->logical, 1, &fence, VK_TRUE, UINT64_MAX);
   vkResetFences(device->logical, 1, &fence);
 
+  vkFreeCommandBuffers(device->logical, commandContext->commandPool, 1, &commandBuffer);
+
   return 1;
 }
 

@@ -162,16 +162,16 @@ void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict criteria)
   {
     AtlrDeviceCriterion* criterion = criteria + i;
     criterion->method = ATLR_DEVICE_CRITERION_METHOD_POINT_SHIFT;
-    criterion->point_shift = 0;
+    criterion->pointShift = 0;
   }
 }
 
-AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType type, AtlrDeviceCriterionMethod method, AtlrI32 point_shift)
+AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType type, AtlrDeviceCriterionMethod method, AtlrI32 pointShift)
 {
   if (type >= ATLR_DEVICE_CRITERION_TOT) return 0;
   AtlrDeviceCriterion* criterion = criteria + type;
   criterion->method = method;
-  criterion->point_shift = point_shift;
+  criterion->pointShift = pointShift;
   return 1;
 }
 
@@ -180,7 +180,7 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   atlrLogMsg(LOG_INFO, "Initializing antler device ...");
   
   AtlrU32 physicalDeviceCount = 0;
-  if (vkEnumeratePhysicalDevices(instance->handle, &physicalDeviceCount, NULL) != VK_SUCCESS)
+  if (vkEnumeratePhysicalDevices(instance->instance, &physicalDeviceCount, NULL) != VK_SUCCESS)
   {
     atlrLogMsg(LOG_FATAL, "vkEnumeratePhysicalDevices (first call) did not return VK_SUCCESS.");
     return 0;
@@ -191,7 +191,7 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
     return 0;
   }
   VkPhysicalDevice* physicalDevices = malloc(physicalDeviceCount * sizeof(VkPhysicalDevice));
-  if (vkEnumeratePhysicalDevices(instance->handle, &physicalDeviceCount, physicalDevices) != VK_SUCCESS)
+  if (vkEnumeratePhysicalDevices(instance->instance, &physicalDeviceCount, physicalDevices) != VK_SUCCESS)
   {
     atlrLogMsg(LOG_FATAL, "vkEnumeratePhysicalDevices (second call) did not return VK_SUCCESS.");
     free(physicalDevices);
@@ -297,21 +297,21 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
       {
         case ATLR_DEVICE_CRITERION_METHOD_POINT_SHIFT:
 	{
-	  if (!criterion->point_shift) break;
+	  if (!criterion->pointShift) break;
 	  const char* met = criterionValue ? "is met" : "is not met";
 	  
 	  if (isFailureLocked)
 	  {
 	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: point-shift by %d) %s. "
 		       "The physical device is locked into a failing grade regardless.",
-		       criterionName, criterion->point_shift,  met);
+		       criterionName, criterion->pointShift,  met);
 	    break;
 	  }
 	  
-	  grade += criterionValue ? criterion->point_shift : 0;
+	  grade += criterionValue ? criterion->pointShift : 0;
 	  atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: point-shift by %d) %s. "
 		     "The current grade is %d.",
-		     criterionName, criterion->point_shift, met, grade);
+		     criterionName, criterion->pointShift, met, grade);
 	  break;
 	}
 

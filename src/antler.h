@@ -28,7 +28,7 @@ typedef double   AtlrF64;
 
 typedef struct AtlrInstance
 {
-  VkInstance handle;
+  VkInstance instance;
   GLFWwindow* window;
   VkAllocationCallbacks* allocator;
   VkSurfaceKHR surface;
@@ -78,7 +78,7 @@ typedef enum
 typedef struct AtlrDeviceCriterion
 {
   AtlrDeviceCriterionMethod method;
-  AtlrI32 point_shift;
+  AtlrI32 pointShift;
   
 } AtlrDeviceCriterion;
 
@@ -95,6 +95,14 @@ typedef struct AtlrDevice
   
 } AtlrDevice;
 
+typedef struct AtlrBuffer
+{
+  VkBuffer buffer;
+  VkDeviceMemory memory;
+  void* data;
+  
+} AtlrBuffer;
+
 typedef struct AtlrSingleRecordCommandContext
 {
   VkCommandPool commandPool;
@@ -107,6 +115,8 @@ typedef struct AtlrSingleRecordCommandContext
 //
 
 void atlrLogMsg(AtlrLoggerType, const char* restrict format, ...);
+
+AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDevice physical, const AtlrU32 typeFilter, const VkMemoryPropertyFlags properties);
 
 AtlrU8 atlrInitInstance(AtlrInstance* restrict,
 			const int width, const int height, const char* restrict name);
@@ -124,8 +134,18 @@ AtlrU8 atlrBeginCommandRecording(const VkCommandBuffer, const VkCommandBufferUsa
 AtlrU8 atlrEndCommandRecording(const VkCommandBuffer);
 AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrInstance* restrict, const AtlrDevice* restrict);
 void atlrDeinitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrInstance* restrict, const AtlrDevice* restrict);
-
 AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict, const AtlrSingleRecordCommandContext* restrict, const AtlrDevice*);
 AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecordCommandContext* restrict, const AtlrDevice*);
 void atlrCommandSetViewport(const VkCommandBuffer, const float width, const float height);
 void atlrCommandSetScissor(const VkCommandBuffer, const VkExtent2D*);
+
+AtlrU8 atlrInitBuffer(AtlrBuffer* restrict, const AtlrU64 size, const VkBufferUsageFlags, const VkMemoryPropertyFlags,
+		      const AtlrInstance*, const AtlrDevice*);
+void atlrDeinitBuffer(AtlrBuffer* restrict, const AtlrInstance*, const AtlrDevice*);
+AtlrU8 atlrMapBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags,
+		     const AtlrDevice*);
+void atlrUnmapBuffer(const AtlrBuffer* restrict, const AtlrDevice*);
+AtlrU8 atlrLoadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data,
+		      const AtlrDevice* restrict);
+AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
+		      const AtlrDevice* restrict, const AtlrSingleRecordCommandContext*);

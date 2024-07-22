@@ -100,13 +100,13 @@ static void initVkDebugUtilsMessengerCreateInfoEXT(VkDebugUtilsMessengerCreateIn
 static AtlrU8 initDebugMessenger(AtlrInstance* restrict instance, const VkDebugUtilsMessengerCreateInfoEXT* restrict debugInfo)
 {
   PFN_vkCreateDebugUtilsMessengerEXT pfnCreate =
-    (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->handle, "vkCreateDebugUtilsMessengerEXT");
+    (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->instance, "vkCreateDebugUtilsMessengerEXT");
   if (!pfnCreate)
   {
     atlrLogMsg(LOG_FATAL, "vkGetInstanceProcAddr returned 0.");
     return 0;
   }
-  if (pfnCreate(instance->handle, debugInfo, instance->allocator, &debugMessenger) != VK_SUCCESS)
+  if (pfnCreate(instance->instance, debugInfo, instance->allocator, &debugMessenger) != VK_SUCCESS)
     return 0;
 
   return 1;
@@ -115,10 +115,10 @@ static AtlrU8 initDebugMessenger(AtlrInstance* restrict instance, const VkDebugU
 static void deinitDebugMessenger(AtlrInstance* restrict instance)
 {
   PFN_vkDestroyDebugUtilsMessengerEXT pfnDestroy =
-    (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->handle, "vkDestroyDebugUtilsMessengerEXT");
+    (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->instance, "vkDestroyDebugUtilsMessengerEXT");
   if (!pfnDestroy)
     atlrLogMsg(LOG_ERROR, "vkGetInstanceProcAddr returned 0.");
-  pfnDestroy(instance->handle, debugMessenger, instance->allocator);
+  pfnDestroy(instance->instance, debugMessenger, instance->allocator);
 }
 
 #endif
@@ -239,7 +239,7 @@ AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
   instanceInfo.ppEnabledExtensionNames = extensions; 
 
   // finish init instance
-  if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->handle) != VK_SUCCESS)
+  if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->instance) != VK_SUCCESS)
   {
     atlrLogMsg(LOG_FATAL, "vkCreateInstance did not return VK_SUCCESS.");
     free(extensions);
@@ -253,7 +253,7 @@ AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
     return 0;
   }
 #endif
-  if (glfwCreateWindowSurface(instance->handle, instance->window, instance->allocator, &instance->surface) != VK_SUCCESS)
+  if (glfwCreateWindowSurface(instance->instance, instance->window, instance->allocator, &instance->surface) != VK_SUCCESS)
     {
       atlrLogMsg(LOG_FATAL, "glfwCreateWindowSurface did not return VK_SUCCESS.");
       free(extensions);
@@ -269,11 +269,11 @@ AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
  {
    atlrLogMsg(LOG_INFO, "Deinitializing antler instance ...");
 
-   vkDestroySurfaceKHR(instance->handle, instance->surface, instance->allocator);
+   vkDestroySurfaceKHR(instance->instance, instance->surface, instance->allocator);
 #ifdef ATLR_DEBUG
    deinitDebugMessenger(instance);
 #endif
-   vkDestroyInstance(instance->handle, instance->allocator);
+   vkDestroyInstance(instance->instance, instance->allocator);
    
    glfwDestroyWindow(instance->window);
    glfwTerminate();
