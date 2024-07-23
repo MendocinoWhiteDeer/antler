@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "antler.h"
+#include "GLFW/glfw3.h"
 
 #ifdef ATLR_DEBUG
 
@@ -161,10 +162,106 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
   return extensionsFound;
 }
 
-AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
-			const int width, const int height, const char* restrict name)
+AtlrU8 atlrInitInstanceHeadless(AtlrInstance* restrict instance, const char* restrict name)
 {
-  atlrLogMsg(LOG_INFO, "Initializing antler instance ...");
+  atlrLogMsg(LOG_INFO, "Initializing headless mode antler instance ...");
+  instance->mode = ATLR_MODE_HEADLESS;
+
+  AtlrU32 apiVersion = VK_API_VERSION_1_3;
+  if (vkEnumerateInstanceVersion(&apiVersion) != VK_SUCCESS)
+  {
+    atlrLogMsg(LOG_FATAL, "Vulkan version 1.3 is not supported.");
+    return 0;
+  }
+
+  const VkApplicationInfo appInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    .pNext = NULL,
+    .pApplicationName = name,
+    .applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+    .pEngineName = "antler",
+    .engineVersion = VK_MAKE_VERSION(0, 0, 1),
+    .apiVersion = apiVersion
+  };
+
+  VkInstanceCreateInfo instanceInfo = {};
+  instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  instanceInfo.pApplicationInfo = &appInfo;
+
+  // validation layer
+#ifdef ATLR_DEBUG
+  atlrLogMsg(LOG_DEBUG, "Requiring Vulkan validation layer.");
+  if (!isValidationLayerAvailable())
+  {
+    atlrLogMsg(LOG_FATAL, "isValidationLayerAvailable returned 0.");
+    return 0;
+  }
+  atlrLogMsg(LOG_DEBUG, "Vulkan validation layer is available.");
+  instanceInfo.enabledLayerCount = 1;
+  instanceInfo.ppEnabledLayerNames = &validationLayer;
+
+  VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
+  initVkDebugUtilsMessengerCreateInfoEXT(&debugInfo);
+  instanceInfo.pNext = &debugInfo;
+#endif
+
+  // extensions
+  AtlrU32 extensionCount = 0;
+  const char** extensions = malloc(sizeof(const char*));
+#ifdef ATLR_DEBUG
+  extensions[extensionCount] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+  extensionCount++;
+#endif
+  for (AtlrU32 i = 0; i < extensionCount; i++)
+    atlrLogMsg(LOG_DEBUG, "Requiring Vulkan instance extension \"%s\".", extensions[i]);
+  if (!areInstanceExtensionsAvailable(extensions, extensionCount))
+  {
+    atlrLogMsg(LOG_FATAL, "areInstanceExtensionsAvailable returned 0.");
+    free(extensions);
+    return 0;
+  }
+  instanceInfo.enabledExtensionCount = extensionCount;
+  instanceInfo.ppEnabledExtensionNames = extensions; 
+
+  // finish initializing instance
+  if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->instance) != VK_SUCCESS)
+  {
+    atlrLogMsg(LOG_FATAL, "vkCreateInstance did not return VK_SUCCESS.");
+    free(extensions);
+    return 0;
+  }
+  free(extensions);
+#ifdef ATLR_DEBUG
+  if (!initDebugMessenger(instance, &debugInfo))
+  {
+    atlrLogMsg(LOG_FATAL, "initDebugMessenger returned 0.");
+    return 0;
+  }
+#endif
+  instance->surface = VK_NULL_HANDLE;
+  instance->data = NULL;
+
+  atlrLogMsg(LOG_INFO, "Done initializing headless mode antler instance.");
+  return 1;
+}
+
+void atlrDeinitInstanceHeadless(AtlrInstance* restrict instance)
+{
+  atlrLogMsg(LOG_INFO, "Deinitializing headless mode antler instance ...");
+
+#ifdef ATLR_DEBUG
+  deinitDebugMessenger(instance);
+#endif
+  vkDestroyInstance(instance->instance, instance->allocator);
+   
+  atlrLogMsg(LOG_INFO, "Done deinitializing headless mode antler instance.");
+}
+
+AtlrU8 atlrInitInstanceGLFW(AtlrInstance* restrict instance, const int width, const int height, const char* restrict name)
+{
+  atlrLogMsg(LOG_INFO, "Initializing GLFW mode antler instance ...");
+  instance->mode = ATLR_MODE_GLFW;
   
   if (!glfwInit())
   {
@@ -172,8 +269,8 @@ AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
     return 0;
   }
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  instance->window = glfwCreateWindow(width, height, name, NULL, NULL);
-  if (!instance->window)
+  GLFWwindow* window = glfwCreateWindow(width, height, name, NULL, NULL);
+  if (!window)
   {
     atlrLogMsg(LOG_FATAL, "glfwCreateWindow returned 0.");
     return 0;
@@ -238,45 +335,45 @@ AtlrU8 atlrInitInstance(AtlrInstance* restrict instance,
   instanceInfo.enabledExtensionCount = extensionCount;
   instanceInfo.ppEnabledExtensionNames = extensions; 
 
-  // finish init instance
+  // finish initializing instance
   if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->instance) != VK_SUCCESS)
   {
     atlrLogMsg(LOG_FATAL, "vkCreateInstance did not return VK_SUCCESS.");
     free(extensions);
     return 0;
   }
+  free(extensions);
 #ifdef ATLR_DEBUG
   if (!initDebugMessenger(instance, &debugInfo))
   {
     atlrLogMsg(LOG_FATAL, "initDebugMessenger returned 0.");
-    free(extensions);
     return 0;
   }
 #endif
-  if (glfwCreateWindowSurface(instance->instance, instance->window, instance->allocator, &instance->surface) != VK_SUCCESS)
+  if (glfwCreateWindowSurface(instance->instance, window, instance->allocator, &instance->surface) != VK_SUCCESS)
     {
       atlrLogMsg(LOG_FATAL, "glfwCreateWindowSurface did not return VK_SUCCESS.");
-      free(extensions);
       return 0;
     }
+  instance->data = window;
 
-  free(extensions);
-  atlrLogMsg(LOG_INFO, "Done initializing antler instance.");
+  atlrLogMsg(LOG_INFO, "Done initializing GLFW mode antler instance.");
   return 1;
 }
 
- void atlrDeinitInstance(AtlrInstance* restrict instance)
- {
-   atlrLogMsg(LOG_INFO, "Deinitializing antler instance ...");
+void atlrDeinitInstanceGLFW(AtlrInstance* restrict instance)
+{
+  atlrLogMsg(LOG_INFO, "Deinitializing GLFW mode antler instance ...");
 
-   vkDestroySurfaceKHR(instance->instance, instance->surface, instance->allocator);
+  vkDestroySurfaceKHR(instance->instance, instance->surface, instance->allocator);
 #ifdef ATLR_DEBUG
-   deinitDebugMessenger(instance);
+  deinitDebugMessenger(instance);
 #endif
-   vkDestroyInstance(instance->instance, instance->allocator);
+  vkDestroyInstance(instance->instance, instance->allocator);
+
+  GLFWwindow* window = instance->data;
+  glfwDestroyWindow(window);
+  glfwTerminate();
    
-   glfwDestroyWindow(instance->window);
-   glfwTerminate();
-   
-  atlrLogMsg(LOG_INFO, "Done deinitializing antler instance.");
- }
+  atlrLogMsg(LOG_INFO, "Done deinitializing GLFW mode antler instance.");
+}

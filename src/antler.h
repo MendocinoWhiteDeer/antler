@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vulkan/vulkan.h>
-#include "GLFW/glfw3.h"
 
 ///
 /// Data types
@@ -26,12 +25,20 @@ typedef int64_t  AtlrI64;
 typedef float    AtlrF32;
 typedef double   AtlrF64;
 
+typedef enum
+{
+  ATLR_MODE_HEADLESS,
+  ATLR_MODE_GLFW
+  
+} AtlrMode;
+
 typedef struct AtlrInstance
 {
+  AtlrMode mode;
   VkInstance instance;
-  GLFWwindow* window;
   VkAllocationCallbacks* allocator;
   VkSurfaceKHR surface;
+  void* data;
   
 } AtlrInstance;
 
@@ -56,12 +63,24 @@ typedef struct AtlrSwapchainSupportDetails
 
 typedef enum
 {
-  // These criteria correspond to the Vulkan physical device types
+  // Vulkan version criteria
+  ATLR_DEVICE_CRITERION_VULKAN_VERSION_AT_LEAST_1_1,
+  ATLR_DEVICE_CRITERION_VULKAN_VERSION_AT_LEAST_1_2,
+  ATLR_DEVICE_CRITERION_VULKAN_VERSION_AT_LEAST_1_3,
+  
+  // these criteria correspond to the Vulkan physical device types
   ATLR_DEVICE_CRITERION_OTHER_PHYSICAL_DEVICE,
   ATLR_DEVICE_CRITERION_INTEGRATED_GPU_PHYSICAL_DEVICE,
   ATLR_DEVICE_CRITERION_DISCRETE_GPU_PHYSICAL_DEVICE,
   ATLR_DEVICE_CRITERION_VIRTUAL_GPU_PHYSICAL_DEVICE,
   ATLR_DEVICE_CRITERION_CPU_PHYSICAL_DEVICE,
+
+  // queue criteria
+  ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_SUPPORT,
+  ATLR_DEVICE_CRITERION_QUEUE_FAMILY_PRESENT_SUPPORT,
+
+  // swapchain criterion
+  ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT,
 
   ATLR_DEVICE_CRITERION_TOT
   
@@ -88,6 +107,7 @@ typedef struct AtlrDevice
 {
   VkPhysicalDevice physical;
   AtlrQueueFamilyIndices queueFamilyIndices;
+  AtlrU8 hasSwapchainSupport;
   AtlrSwapchainSupportDetails swapchainSupportDetails;
   VkDevice logical;
   VkQueue graphicsQueue;
@@ -118,12 +138,13 @@ void atlrLogMsg(AtlrLoggerType, const char* restrict format, ...);
 
 AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDevice physical, const AtlrU32 typeFilter, const VkMemoryPropertyFlags properties);
 
-AtlrU8 atlrInitInstance(AtlrInstance* restrict,
-			const int width, const int height, const char* restrict name);
-void atlrDeinitInstance(AtlrInstance* restrict);
+AtlrU8 atlrInitInstanceHeadless(AtlrInstance* restrict, const char* restrict name);
+void atlrDeinitInstanceHeadless(AtlrInstance* restrict);
+AtlrU8 atlrInitInstanceGLFW(AtlrInstance* restrict, const int width, const int height, const char* restrict name);
+void atlrDeinitInstanceGLFW(AtlrInstance* restrict);
 
 void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict);
-AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict, AtlrDeviceCriterionType, AtlrDeviceCriterionMethod, AtlrI32 point_shift);
+AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType, AtlrDeviceCriterionMethod, AtlrI32 pointShift);
 AtlrU8 atlrInitDevice(AtlrDevice* restrict, const AtlrInstance* restrict, AtlrDeviceCriterion* restrict);
 void atlrDeinitDevice(AtlrDevice* restrict, const AtlrInstance* restrict);
 

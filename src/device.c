@@ -22,12 +22,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 static const char* deviceCriterionNames[ATLR_DEVICE_CRITERION_TOT] =
 {
-  // These criteria correspond to the Vulkan physical device types
+  "AT LEAST VULKAN VERSION 1.1",
+  "AT LEAST VULKAN VERSION 1.2",
+  "AT LEAST VULKAN VERSION 1.3",
+  
   "OTHER PHYSICAL DEVICE",
   "INTEGRATED GPU PHYSICAL DEVICE",
   "DISCRETE GPU PHYSICAL DEVICE",
   "VIRTUAL GPU PHYSICAL DEVICE",
-  "CPU PHYSICAL DEVICE"
+  "CPU PHYSICAL DEVICE",
+
+  "QUEUE FAMILY GRAPHICS SUPPORT",
+  "QUEUE FAMILY PRESENT SUPPORT",
+
+  "SWAPCHAIN SUPPORT"
 };
 
 // find queue families supporting graphics and present; prioritize any family with both
@@ -42,7 +50,8 @@ static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, con
   {
     VkBool32 graphicsSupport = properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
     VkBool32 presentSupport = 0;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physical, i, instance->surface, &presentSupport);
+    if (instance->mode != ATLR_MODE_HEADLESS)
+      vkGetPhysicalDeviceSurfaceSupportKHR(physical, i, instance->surface, &presentSupport);
 
     if (graphicsSupport && presentSupport)
     {
@@ -207,7 +216,6 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 	     "The physical device with the best grade is chosen.\n"
 	     "A criterion method determines whether a criterion is (a) required, (b) forbidden, or (c) point-shifted.\n"
 	     "Violating a criterion that is (a) or (b) locks into a failing grade. Physical devices that fail will not be ranked.\n"
-	     "In addition to user-provided criteria, there are some base requirements that need to be checked.\n"
 	     "Criterion with (c) apply a (positive or negative) point shift to the grade when satisfied, and zero change to the grade otherwise.");
   atlrLogMsg(LOG_DEBUG, "Grading physical devices based on device criteria  ...");
   for (AtlrU32 i = 0; i < physicalDeviceCount; i++)
@@ -219,58 +227,39 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
     vkGetPhysicalDeviceProperties(physical, &properties);
     vkGetPhysicalDeviceFeatures(physical, &features);
     vkGetPhysicalDeviceMemoryProperties(physical, &memoryProperties);
+    
+    const AtlrU32 version = properties.apiVersion;
+    const AtlrU32 versionMajor = VK_VERSION_MAJOR(version);
+    const AtlrU32 versionMinor = VK_VERSION_MINOR(version);
+
+    AtlrQueueFamilyIndices queueFamilyIndices;
+    initQueueFamilyIndices(&queueFamilyIndices, instance, physical);
+
+    AtlrSwapchainSupportDetails swapchainSupportDetails;
+    const AtlrU8 hasSwapchainSupport =
+      (instance->mode != ATLR_MODE_HEADLESS)
+      && arePhysicalDeviceExtensionsAvailable(physical, &swapchainExtension, 1)
+      && initSwapchainSupportDetails(&swapchainSupportDetails, instance, physical);
 
     atlrLogMsg(LOG_DEBUG, "Grading physical device \"%s\" ...", properties.deviceName);
     AtlrI32 grade = 0;
     AtlrU8 isFailureLocked = 0;
 
-    atlrLogMsg(LOG_DEBUG, "First checking basic requirements ...");
-
-    // Vulkan version requirements
-    {
-      const AtlrU32 version = properties.apiVersion;
-      const AtlrU32 versionMajor = VK_VERSION_MAJOR(version);
-      const AtlrU32 versionMinor = VK_VERSION_MINOR(version);
-      if (versionMajor == 1 && versionMinor < 3)
-      {
-	isFailureLocked = 1;
-	atlrLogMsg(LOG_DEBUG, "The physical device does not support Vulkan 1.3 or later.");
-      }
-      else atlrLogMsg(LOG_DEBUG, "The physical device supports Vulkan 1.3 or later.");
-    }
-
-    // queue requirements
-    AtlrQueueFamilyIndices queueFamilyIndices;
-    initQueueFamilyIndices(&queueFamilyIndices, instance, physical);
-    if (!queueFamilyIndices.isGraphics || !queueFamilyIndices.isPresent)
-    {
-      isFailureLocked = 1;
-      atlrLogMsg(LOG_DEBUG, "Queue requirements are not met.");
-    }
-    else atlrLogMsg(LOG_DEBUG, "Queue requirements are met.");
-
-    // swapchain requirements
-    AtlrSwapchainSupportDetails swapchainSupportDetails;
-    if (!arePhysicalDeviceExtensionsAvailable(physical, &swapchainExtension, 1)
-	|| !initSwapchainSupportDetails(&swapchainSupportDetails, instance, physical))
-    {
-      isFailureLocked = 1;
-      atlrLogMsg(LOG_DEBUG, "Swapchain requirements are not met.");
-    }
-    else atlrLogMsg(LOG_DEBUG, "Swapchain requirements are met.");
-
-    if (isFailureLocked)
-      atlrLogMsg(LOG_DEBUG, "The device failed to meet basic requirements. "
-		 "It is now locked into receiving a failing grade.");
-
-    // user-specified criteria
-    atlrLogMsg(LOG_DEBUG, "Now checking user-specified criteria ...");
     AtlrU8 criterionValues[ATLR_DEVICE_CRITERION_TOT];
     for (AtlrI32 j = 0; j < ATLR_DEVICE_CRITERION_TOT; j++)
     {
       switch(j)
       {
-	// Vulkan physical device type criteria
+        case ATLR_DEVICE_CRITERION_VULKAN_VERSION_AT_LEAST_1_1:
+	  criterionValues[j] = (versionMajor > 1) || ((versionMajor == 1) && (versionMinor >= 1));
+	  break;
+        case ATLR_DEVICE_CRITERION_VULKAN_VERSION_AT_LEAST_1_2:
+	  criterionValues[j] = (versionMajor > 1) || ((versionMajor == 1) && (versionMinor >= 2));
+	  break;
+        case ATLR_DEVICE_CRITERION_VULKAN_VERSION_AT_LEAST_1_3:
+	  criterionValues[j] = (versionMajor > 1) || ((versionMajor == 1) && (versionMinor >= 3));
+	  break;
+	
         case ATLR_DEVICE_CRITERION_OTHER_PHYSICAL_DEVICE:
 	  criterionValues[j] = (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_OTHER);
 	  break;
@@ -286,8 +275,20 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
         case ATLR_DEVICE_CRITERION_CPU_PHYSICAL_DEVICE:
 	  criterionValues[j] = (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU);
 	  break;
+
+        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_SUPPORT:
+	  criterionValues[j] = queueFamilyIndices.isGraphics;
+	  break;
+        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_PRESENT_SUPPORT:
+	  criterionValues[j] = queueFamilyIndices.isPresent;
+	  break;
+
+        case ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT:
+	  criterionValues[j] = hasSwapchainSupport;
+	  break;
       }
-    }    
+    }
+
     for (AtlrI32 j = 0; j < ATLR_DEVICE_CRITERION_TOT; j++)
     {
       const AtlrDeviceCriterion* criterion = criteria + j;
@@ -375,14 +376,16 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
       atlrLogMsg(LOG_INFO, "The physical device \"%s\" received a grade of %d.", properties.deviceName, grade);
     if (!isFailureLocked && ((grade > bestGrade) || !foundPhysicalDevice))
     {
-      if (foundPhysicalDevice) deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
+      if (foundPhysicalDevice && device->hasSwapchainSupport) deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
       bestGrade = grade;
       foundPhysicalDevice = 1;
       device->physical = physical;
       device->queueFamilyIndices = queueFamilyIndices;
+      device->hasSwapchainSupport = hasSwapchainSuppor;
       device->swapchainSupportDetails = swapchainSupportDetails;
     }
-    else deinitSwapchainSupportDetails(&swapchainSupportDetails);
+    else if (hasSwapchainSupport)
+      deinitSwapchainSupportDetails(&swapchainSupportDetails);
   }
   free(physicalDevices);
 
@@ -400,12 +403,17 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   }
 
   AtlrU32 uniqueQueueFamilyIndices[2];
-  const AtlrQueueFamilyIndices* queueFamilyIndices = &device->queueFamilyIndices;
-  uniqueQueueFamilyIndices[0] = queueFamilyIndices->graphics_index;
-  AtlrU8 uniqueQueueFamilyIndicesCount = 1;
-  if (queueFamilyIndices->graphics_index != queueFamilyIndices->present_index)
+  const AtlrQueueFamilyIndices* queueFamilyIndices = &device->queueFamilyIndices; 
+  AtlrU8 uniqueQueueFamilyIndicesCount = 0;
+  if (queueFamilyIndices->isGraphics)
   {
-    uniqueQueueFamilyIndices[1] = queueFamilyIndices->present_index;
+    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->graphics_index;
+    uniqueQueueFamilyIndicesCount++;
+  }
+  if (queueFamilyIndices->isPresent &&
+      (!queueFamilyIndices->isGraphics || (queueFamilyIndices->graphics_index != queueFamilyIndices->present_index)))
+  {
+    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->present_index;
     uniqueQueueFamilyIndicesCount++;
   }
   VkDeviceQueueCreateInfo queueInfos[2];
@@ -422,25 +430,40 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
     };
 
   // create logical device; enabledLayerCount and ppEnabledLayerNames are deprecated fields
-  const VkDeviceCreateInfo deviceInfo =
+  VkDeviceCreateInfo deviceInfo =
   {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     .pNext = NULL,
     .flags = 0,
     .queueCreateInfoCount = uniqueQueueFamilyIndicesCount,
     .pQueueCreateInfos = queueInfos,
-    .enabledExtensionCount = 1,
-    .ppEnabledExtensionNames = &swapchainExtension
   };
+  if (device->hasSwapchainSupport)
+  {
+    deviceInfo.enabledExtensionCount = 1;
+    deviceInfo.ppEnabledExtensionNames = &swapchainExtension;
+  }
+  else
+  {
+    deviceInfo.enabledExtensionCount = 0;
+    deviceInfo.ppEnabledExtensionNames = NULL;
+  }
   if (vkCreateDevice(device->physical, &deviceInfo, instance->allocator, &device->logical) != VK_SUCCESS)
   {
     atlrLogMsg(LOG_FATAL, "vkCreateDevice did return VK_SUCCESS.");
-    deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
+    if (device->hasSwapchainSupport)
+      deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
     return 0;
   }
 
-  vkGetDeviceQueue(device->logical, queueFamilyIndices->graphics_index, 0, &device->graphicsQueue);
-  vkGetDeviceQueue(device->logical, queueFamilyIndices->present_index, 0, &device->presentQueue);
+  if (queueFamilyIndices->isGraphics)
+    vkGetDeviceQueue(device->logical, queueFamilyIndices->graphics_index, 0, &device->graphicsQueue);
+  else
+    device->graphicsQueue = VK_NULL_HANDLE;
+  if (queueFamilyIndices->isPresent)
+    vkGetDeviceQueue(device->logical, queueFamilyIndices->present_index, 0, &device->presentQueue);
+  else
+    device->presentQueue = VK_NULL_HANDLE;
 
   atlrLogMsg(LOG_INFO, "Done initializing antler device.");
   return 1;
@@ -451,7 +474,8 @@ void atlrDeinitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   atlrLogMsg(LOG_INFO, "Deinitializing antler device ...");
 
   vkDestroyDevice(device->logical, instance->allocator);
-  deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
+  if (device->hasSwapchainSupport)
+    deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
 
   atlrLogMsg(LOG_INFO, "Done deinitializing antler device.");
 }
