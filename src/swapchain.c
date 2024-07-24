@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "antler.h"
-#include "GLFW/glfw3.h"
 
 static VkSurfaceFormatKHR getSurfaceFormat(const VkSurfaceFormatKHR* restrict availableFormats, const AtlrU32 availableFormatCount)
 {

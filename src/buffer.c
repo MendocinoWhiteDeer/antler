@@ -45,7 +45,7 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   AtlrU32 memoryTypeIndex;
   if (!atlrGetVulkanMemoryTypeIndex(&memoryTypeIndex, device->physical, memoryRequirements.memoryTypeBits, properties))
   {
-    ATLR_LOG_ERROR("getBufferMemoryTypeIndex returned 0.");
+    ATLR_LOG_ERROR("atlrGetVulkanMemoryTypeIndex returned 0.");
     return 0;
   }
   const VkMemoryAllocateInfo memoryAllocateInfo =
@@ -127,6 +127,53 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
     .size = size
   };
   vkCmdCopyBuffer(commandBuffer, src->buffer, dst->buffer, 1, &copyRegion);
+
+  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext, device))
+  {
+    ATLR_LOG_ERROR("atlrEndSingleRecordCommands returned 0.");
+    return 0;
+  }
+
+  return 1;
+}
+
+AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict image,
+			     const VkOffset2D* offset, const VkExtent2D* extent,
+			     const AtlrSingleRecordCommandContext* commandContext, const AtlrDevice* device)
+{
+  VkCommandBuffer commandBuffer;
+  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext, device))
+  {
+    ATLR_LOG_ERROR("atlrBeginSingleRecordCommands returned 0.");
+    return 0;
+  }
+
+  const VkBufferImageCopy copyRegion =
+  {
+    .bufferOffset = 0,
+    .bufferRowLength = 0,
+    .bufferImageHeight = 0,
+    .imageSubresource = (VkImageSubresourceLayers)
+    {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .baseArrayLayer = 0,
+      .layerCount = image->layerCount
+    },
+    .imageOffset = (VkOffset3D)
+    {
+      .x = offset->x,
+      .y = offset->y,
+      .z = 0
+    },
+    .imageExtent = (VkExtent3D)
+    {
+      .width = extent->width,
+      .height = extent->height,
+      .depth = 1
+    }
+  };
+  vkCmdCopyBufferToImage(commandBuffer, buffer->buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
   if (!atlrEndSingleRecordCommands(commandBuffer, commandContext, device))
   {

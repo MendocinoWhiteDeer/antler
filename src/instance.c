@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "antler.h"
-#include "GLFW/glfw3.h"
 
 static AtlrU8 initAppInfo(VkApplicationInfo* appInfo, const char* name)
 {
@@ -43,7 +42,6 @@ static AtlrU8 initAppInfo(VkApplicationInfo* appInfo, const char* name)
 
 #ifdef ATLR_DEBUG
 
-static VkDebugUtilsMessengerEXT debugMessenger; // originally this was wrapped in a struct in a header file; DON'T DO THAT, CAUSES SEGFAULT!!
 static const char* validationLayer = "VK_LAYER_KHRONOS_validation";
 
 static AtlrU8 isValidationLayerAvailable()
@@ -127,7 +125,7 @@ static AtlrU8 initDebugMessenger(AtlrInstance* restrict instance, const VkDebugU
     ATLR_LOG_ERROR("vkGetInstanceProcAddr returned 0.");
     return 0;
   }
-  if (pfnCreate(instance->instance, debugInfo, instance->allocator, &debugMessenger) != VK_SUCCESS)
+  if (pfnCreate(instance->instance, debugInfo, instance->allocator, &instance->debugMessenger) != VK_SUCCESS)
     return 0;
 
   return 1;
@@ -139,7 +137,7 @@ static void deinitDebugMessenger(const AtlrInstance* restrict instance)
     (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->instance, "vkDestroyDebugUtilsMessengerEXT");
   if (!pfnDestroy)
     ATLR_LOG_ERROR("vkGetInstanceProcAddr returned 0.");
-  pfnDestroy(instance->instance, debugMessenger, instance->allocator);
+  pfnDestroy(instance->instance, instance->debugMessenger, instance->allocator);
 }
 
 #endif
@@ -148,17 +146,22 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
 {
   AtlrU32 availableExtensionCount = 0;
   if(vkEnumerateInstanceExtensionProperties(NULL, &availableExtensionCount, NULL) != VK_SUCCESS)
-    {
-      ATLR_LOG_ERROR("vkEnumerateInstanceExtensionProperties (first call) did not return VK_SUCCESS.");
-      return 0;
-    }
+  {
+    ATLR_LOG_ERROR("vkEnumerateInstanceExtensionProperties (first call) did not return VK_SUCCESS.");
+    return 0;
+  }
+  if (!availableExtensionCount)
+  {
+    ATLR_LOG_ERROR("No available extensions.");
+    return 0;
+  }
   VkExtensionProperties* availableExtensions = malloc(availableExtensionCount * sizeof(VkExtensionProperties));
   if(vkEnumerateInstanceExtensionProperties(NULL, &availableExtensionCount, availableExtensions) != VK_SUCCESS)
-    {
-      ATLR_LOG_ERROR("vkEnumerateInstanceExtensionProperties (second call) did not return VK_SUCCESS.");
-      free(availableExtensions);
-      return 0;
-    }
+  {
+    ATLR_LOG_ERROR("vkEnumerateInstanceExtensionProperties (second call) did not return VK_SUCCESS.");
+    free(availableExtensions);
+    return 0;
+   }
 
   AtlrU8 extensionsFound = 1;
   for (AtlrU32 i = 0; i < extensionCount; i++)

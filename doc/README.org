@@ -8,6 +8,10 @@ A convenience library for Vulkan graphics programming. Not ready for use.
 
 https://vulkan-tutorial.com/
 
+https://vkguide.dev
+
+https://saschawillems.de
+
 https://docs.vulkan.org/guide/latest/vulkan_spec.html
 
 ** Dependencies
