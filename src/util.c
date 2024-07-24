@@ -34,6 +34,6 @@ AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDev
       }
    }
 
-  atlrLogMsg(LOG_ERROR, "No suitable buffer memory type.");
+  ATLR_LOG_ERROR("No suitable buffer memory type.");
   return 0;
 }

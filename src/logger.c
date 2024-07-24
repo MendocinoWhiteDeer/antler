@@ -44,7 +44,7 @@ static const char* loggerColors[] =
   ANSI_COLOR_YELLOW, ANSI_COLOR_MAGENTA, ANSI_COLOR_RED
 };
 
-void atlrLogMsg(AtlrLoggerType t, const char* format, ...)
+void atlrLog(AtlrLoggerType t, const char* format, ...)
 {
   va_list args;
   va_start(args, format);

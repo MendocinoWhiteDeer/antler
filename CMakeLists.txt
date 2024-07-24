@@ -22,7 +22,9 @@ add_library(antler SHARED
   "src/instance.c"
   "src/device.c"
   "src/commands.c"
-  "src/buffer.c")
+  "src/buffer.c"
+  "src/image.c"
+  "src/swapchain.c")
 target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 # GLFW

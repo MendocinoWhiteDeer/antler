@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "antler.h"
 
 AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
-		      const AtlrInstance* instance, const AtlrDevice* device)
+		      const AtlrDevice* device)
 {
   const VkBufferCreateInfo bufferInfo =
   {
@@ -34,9 +34,9 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
     .queueFamilyIndexCount = 0,
     .pQueueFamilyIndices = NULL
   };
-  if (vkCreateBuffer(device->logical, &bufferInfo, instance->allocator, &buffer->buffer) != VK_SUCCESS)
+  if (vkCreateBuffer(device->logical, &bufferInfo, device->instance->allocator, &buffer->buffer) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkCreateBuffer did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkCreateBuffer did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -45,7 +45,7 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   AtlrU32 memoryTypeIndex;
   if (!atlrGetVulkanMemoryTypeIndex(&memoryTypeIndex, device->physical, memoryRequirements.memoryTypeBits, properties))
   {
-    atlrLogMsg(LOG_ERROR, "getBufferMemoryTypeIndex returned 0.");
+    ATLR_LOG_ERROR("getBufferMemoryTypeIndex returned 0.");
     return 0;
   }
   const VkMemoryAllocateInfo memoryAllocateInfo =
@@ -55,15 +55,15 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
     .allocationSize = memoryRequirements.size,
     .memoryTypeIndex = memoryTypeIndex
   };
-  if (vkAllocateMemory(device->logical, &memoryAllocateInfo, instance->allocator, &buffer->memory) != VK_SUCCESS)
+  if (vkAllocateMemory(device->logical, &memoryAllocateInfo, device->instance->allocator, &buffer->memory) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkAllocateMemory did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkAllocateMemory did not return VK_SUCCESS.");
     return 0;
   }
 
   if (vkBindBufferMemory(device->logical, buffer->buffer, buffer->memory, 0) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkBindBufferMemory did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkBindBufferMemory did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -72,10 +72,10 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   return 1;
 }
 
-void atlrDeinitBuffer(AtlrBuffer* restrict buffer, const AtlrInstance* instance, const AtlrDevice* device)
+void atlrDeinitBuffer(AtlrBuffer* restrict buffer, const AtlrDevice* device)
 {
-  vkFreeMemory(device->logical, buffer->memory, instance->allocator);
-  vkDestroyBuffer(device->logical, buffer->buffer, instance->allocator);
+  vkFreeMemory(device->logical, buffer->memory, device->instance->allocator);
+  vkDestroyBuffer(device->logical, buffer->buffer, device->instance->allocator);
 }
 
 AtlrU8 atlrMapBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags,
@@ -83,14 +83,15 @@ AtlrU8 atlrMapBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const At
 {
   if (vkMapMemory(device->logical, buffer->memory, offset, size, flags, &buffer->data) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkMapMemory did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkMapMemory did not return VK_SUCCESS.");
     return 0;
   }
 
   return 1;
 }
 
-void atlrUnmapBuffer(const AtlrBuffer* restrict buffer, const AtlrDevice* device)
+void atlrUnmapBuffer(const AtlrBuffer* restrict buffer,
+		     const AtlrDevice* device)
 {
   vkUnmapMemory(device->logical, buffer->memory);
 }
@@ -100,7 +101,7 @@ AtlrU8 atlrLoadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const A
 {
   if (!atlrMapBuffer(buffer, offset, size, flags, device))
   {
-    atlrLogMsg(LOG_ERROR, "atlrMapBuffer returned 0.");
+    ATLR_LOG_ERROR("atlrMapBuffer returned 0.");
     return 0;
   }
   memcpy(buffer->data, data, size);
@@ -115,7 +116,7 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext, device))
   {
-    atlrLogMsg(LOG_ERROR, "atlrBeginSingleRecordCommands returned 0.");
+    ATLR_LOG_ERROR("atlrBeginSingleRecordCommands returned 0.");
     return 0;
   }
 
@@ -129,7 +130,7 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
 
   if (!atlrEndSingleRecordCommands(commandBuffer, commandContext, device))
   {
-    atlrLogMsg(LOG_ERROR, "atlrEndSingleRecordCommands returned 0.");
+    ATLR_LOG_ERROR("atlrEndSingleRecordCommands returned 0.");
     return 0;
   }
 

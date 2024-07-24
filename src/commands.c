@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "antler.h"
 
 AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags,
-				   const AtlrInstance* restrict instance, const AtlrDevice* restrict device)
+				   const AtlrDevice* restrict device)
 {
   const VkCommandPoolCreateInfo poolInfo =
   {
@@ -30,9 +30,9 @@ AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict commandPool, const Vk
     .flags = flags,
     .queueFamilyIndex = device->queueFamilyIndices.graphics_index
   };
-  if (vkCreateCommandPool(device->logical, &poolInfo, instance->allocator, commandPool) != VK_SUCCESS)
+  if (vkCreateCommandPool(device->logical, &poolInfo, device->instance->allocator, commandPool) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkCreateCommandPool did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkCreateCommandPool did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -40,9 +40,9 @@ AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict commandPool, const Vk
 }
 
 void atlrDeinitCommandPool(const VkCommandPool commandPool,
-			   const AtlrInstance* restrict instance, const AtlrDevice* restrict device)
+			   const AtlrDevice* restrict device)
 {
-  vkDestroyCommandPool(device->logical, commandPool, instance->allocator);
+  vkDestroyCommandPool(device->logical, commandPool, device->instance->allocator);
 }
 
 AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffers, AtlrU32 commandBufferCount, const VkCommandPool commandPool,
@@ -58,7 +58,7 @@ AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffer
   };
   if (vkAllocateCommandBuffers(device->logical, &allocInfo, commandBuffers) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkAllocateCommandBuffers did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkAllocateCommandBuffers did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -76,7 +76,7 @@ AtlrU8 atlrBeginCommandRecording(const VkCommandBuffer commandBuffer, const VkCo
   };
   if (vkBeginCommandBuffer(commandBuffer, &info) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkBeginCommandBuffer did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkBeginCommandBuffer did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -87,7 +87,7 @@ AtlrU8 atlrEndCommandRecording(const VkCommandBuffer commandBuffer)
 {
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkEndCommandBuffer did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkEndCommandBuffer did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -95,12 +95,11 @@ AtlrU8 atlrEndCommandRecording(const VkCommandBuffer commandBuffer)
 }
 
 AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict commandContext,
-					  const AtlrInstance* restrict instance, const AtlrDevice* restrict device)
+					  const AtlrDevice* restrict device)
 {
-  if (!atlrInitGraphicsCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-				   instance, device))
+  if (!atlrInitGraphicsCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, device))
   {
-    atlrLogMsg(LOG_ERROR, "atlrInitGraphicsCommandPool returned 0.");
+    ATLR_LOG_ERROR("atlrInitGraphicsCommandPool returned 0.");
     return 0;
   }
 
@@ -110,9 +109,9 @@ AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restri
     .pNext = NULL,
     .flags = 0
   };
-  if (vkCreateFence(device->logical, &fenceInfo, instance->allocator, &commandContext->fence) != VK_SUCCESS)
+  if (vkCreateFence(device->logical, &fenceInfo, device->instance->allocator, &commandContext->fence) != VK_SUCCESS)
     {
-      atlrLogMsg(LOG_ERROR, "vkCreateFence did not return VK_SUCCESS.");
+      ATLR_LOG_ERROR("vkCreateFence did not return VK_SUCCESS.");
       return 0;
     }
 
@@ -120,10 +119,10 @@ AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restri
 }
 
 void atlrDeinitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict commandContext,
-					  const AtlrInstance* restrict instance, const AtlrDevice* restrict device)
+					  const AtlrDevice* restrict device)
 {
-  vkDestroyFence(device->logical, commandContext->fence, instance->allocator);
-  atlrDeinitCommandPool(commandContext->commandPool, instance, device);
+  vkDestroyFence(device->logical, commandContext->fence, device->instance->allocator);
+  atlrDeinitCommandPool(commandContext->commandPool, device);
 }
 
 AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict commandBuffer, const AtlrSingleRecordCommandContext* restrict commandContext,
@@ -131,13 +130,13 @@ AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict commandBuffer, co
 {
   if (!atlrAllocatePrimaryCommandBuffers(commandBuffer, 1, commandContext->commandPool, device))
   {
-    atlrLogMsg(LOG_ERROR, "atlrAllocatePrimaryCommandBuffers returned 0.");
+    ATLR_LOG_ERROR("atlrAllocatePrimaryCommandBuffers returned 0.");
     return 0;
   }
   
   if (!atlrBeginCommandRecording(*commandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT))
   {
-    atlrLogMsg(LOG_ERROR, "altrBeginCommandRecording returned 0.");
+    ATLR_LOG_ERROR("altrBeginCommandRecording returned 0.");
     return 0;
   }
 
@@ -149,7 +148,7 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer commandBuffer, const At
 {
   if (!atlrEndCommandRecording(commandBuffer))
   {
-    atlrLogMsg(LOG_ERROR, "atlrEndCommandRecording returned 0.");
+    ATLR_LOG_ERROR("atlrEndCommandRecording returned 0.");
     return 0;
   }
 
@@ -167,7 +166,7 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer commandBuffer, const At
   };
   if (vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, fence) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkQueueSubmit did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkQueueSubmit did not return VK_SUCCESS.");
     return 0;
   }
 

@@ -50,7 +50,7 @@ static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, con
   {
     VkBool32 graphicsSupport = properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
     VkBool32 presentSupport = 0;
-    if (instance->mode != ATLR_MODE_HEADLESS)
+    if (instance->surface != VK_NULL_HANDLE)
       vkGetPhysicalDeviceSurfaceSupportKHR(physical, i, instance->surface, &presentSupport);
 
     if (graphicsSupport && presentSupport)
@@ -81,13 +81,13 @@ static AtlrU8 arePhysicalDeviceExtensionsAvailable(const VkPhysicalDevice physic
   AtlrU32 availableExtensionCount = 0;
   if (vkEnumerateDeviceExtensionProperties(physical, NULL, &availableExtensionCount, NULL) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkEnumerateDeviceExtensionProperties (first call) did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkEnumerateDeviceExtensionProperties (first call) did not return VK_SUCCESS.");
     return 0;
   }
   VkExtensionProperties* availableExtensions = malloc(availableExtensionCount * sizeof(VkExtensionProperties));
   if (vkEnumerateDeviceExtensionProperties(physical, NULL, &availableExtensionCount, availableExtensions) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkEnumerateDeviceExtensionProperties (second call) did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkEnumerateDeviceExtensionProperties (second call) did not return VK_SUCCESS.");
     free(availableExtensions);
     return 0;
   }
@@ -100,12 +100,12 @@ static AtlrU8 arePhysicalDeviceExtensionsAvailable(const VkPhysicalDevice physic
       if (!strcmp(extensions[i], availableExtensions[j].extensionName))
 	{
 	  found = 1;
-	  atlrLogMsg(LOG_DEBUG, "Vulkan device extension \"%s\" is available.", extensions[i]);
+	  atlrLog(LOG_DEBUG, "Vulkan device extension \"%s\" is available.", extensions[i]);
 	  break;
 	}
     if (!found)
       {
-	atlrLogMsg(LOG_DEBUG, "Vulkan device extension \"%s\" is unavailable.", extensions[i]);
+	atlrLog(LOG_DEBUG, "Vulkan device extension \"%s\" is unavailable.", extensions[i]);
 	extensionsFound = 0;
       }
   }
@@ -118,7 +118,7 @@ static AtlrU8 initSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict 
 {
   if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical, instance->surface, &support->capabilities) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkGetPhysicalDeviceSurfaceCapabilitiesKHR did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -126,7 +126,7 @@ static AtlrU8 initSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict 
   support->formats = NULL;
   if (vkGetPhysicalDeviceSurfaceFormatsKHR(physical, instance->surface, &support->formatCount, NULL) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkGetPhysicalDeviceSurfaceFormatsKHR (first call) did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkGetPhysicalDeviceSurfaceFormatsKHR (first call) did not return VK_SUCCESS.");
     return 0;
   }
   if (support->formatCount)
@@ -134,7 +134,7 @@ static AtlrU8 initSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict 
     support->formats = malloc(support->formatCount * sizeof(VkSurfaceFormatKHR));
     if (vkGetPhysicalDeviceSurfaceFormatsKHR(physical, instance->surface, &support->formatCount, support->formats) != VK_SUCCESS)
     {
-      atlrLogMsg(LOG_ERROR, "vkGetPhysicalDeviceSurfaceFormatsKHR (second call) did not return VK_SUCCESS.");
+      ATLR_LOG_ERROR("vkGetPhysicalDeviceSurfaceFormatsKHR (second call) did not return VK_SUCCESS.");
       return 0;
     }
   }
@@ -143,7 +143,7 @@ static AtlrU8 initSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict 
   support->presentModes = NULL;
   if (vkGetPhysicalDeviceSurfacePresentModesKHR(physical, instance->surface, &support->presentModeCount, NULL) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_ERROR, "vkGetPhysicalDeviceSurfacePresentModesKHR (first call) did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkGetPhysicalDeviceSurfacePresentModesKHR (first call) did not return VK_SUCCESS.");
     return 0;
   }
   if (support->presentModeCount)
@@ -151,7 +151,7 @@ static AtlrU8 initSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict 
     support->presentModes = malloc(support->presentModeCount * sizeof(VkPresentModeKHR));
     if (vkGetPhysicalDeviceSurfacePresentModesKHR(physical, instance->surface, &support->presentModeCount,support->presentModes) != VK_SUCCESS)
     {
-      atlrLogMsg(LOG_ERROR, "vkGetPhysicalDeviceSurfacePresentModesKHR (second call) did not return VK_SUCCESS.");
+      ATLR_LOG_ERROR("vkGetPhysicalDeviceSurfacePresentModesKHR (second call) did not return VK_SUCCESS.");
       return 0;
     }
   }
@@ -184,25 +184,38 @@ AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDevice
   return 1;
 }
 
-AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict instance, AtlrDeviceCriterion* restrict criteria)
+AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restrict instance, const AtlrDeviceCriterion* restrict criteria)
 {
-  atlrLogMsg(LOG_INFO, "Initializing antler device ...");
+  switch (instance->mode)
+  {
+    case ATLR_MODE_HOST_HEADLESS:
+      atlrLog(LOG_INFO, "Initializing Antler device in host headless mode ...");
+      break;
+    case ATLR_MODE_HOST_GLFW:
+      atlrLog(LOG_INFO, "Initializing Antler device in host GLFW mode ...");
+      break;
+    case ATLR_MODE_HOOK:
+    default:
+      ATLR_LOG_ERROR("Antler is not in a host-type mode.");
+      return 0;
+  }
+  device->instance = instance;
   
   AtlrU32 physicalDeviceCount = 0;
   if (vkEnumeratePhysicalDevices(instance->instance, &physicalDeviceCount, NULL) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_FATAL, "vkEnumeratePhysicalDevices (first call) did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkEnumeratePhysicalDevices (first call) did not return VK_SUCCESS.");
     return 0;
   }
   if (!physicalDeviceCount)
   {
-    atlrLogMsg(LOG_FATAL, "No physical devices with Vulkan support.");
+    ATLR_LOG_ERROR("No physical devices with Vulkan support.");
     return 0;
   }
   VkPhysicalDevice* physicalDevices = malloc(physicalDeviceCount * sizeof(VkPhysicalDevice));
   if (vkEnumeratePhysicalDevices(instance->instance, &physicalDeviceCount, physicalDevices) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_FATAL, "vkEnumeratePhysicalDevices (second call) did not return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkEnumeratePhysicalDevices (second call) did not return VK_SUCCESS.");
     free(physicalDevices);
     return 0;
   }
@@ -211,13 +224,13 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   AtlrU32 bestGrade = 0;
   AtlrU8 foundPhysicalDevice = 0;
   static const char* swapchainExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-  atlrLogMsg(LOG_DEBUG,
+  atlrLog(LOG_DEBUG,
 	     "Physical devices may be numerically graded based on different user-provided criteria.\n"
 	     "The physical device with the best grade is chosen.\n"
 	     "A criterion method determines whether a criterion is (a) required, (b) forbidden, or (c) point-shifted.\n"
 	     "Violating a criterion that is (a) or (b) locks into a failing grade. Physical devices that fail will not be ranked.\n"
 	     "Criterion with (c) apply a (positive or negative) point shift to the grade when satisfied, and zero change to the grade otherwise.");
-  atlrLogMsg(LOG_DEBUG, "Grading physical devices based on device criteria  ...");
+  atlrLog(LOG_DEBUG, "Grading physical devices based on device criteria ...");
   for (AtlrU32 i = 0; i < physicalDeviceCount; i++)
   { 
     const VkPhysicalDevice physical = physicalDevices[i];
@@ -237,11 +250,11 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 
     AtlrSwapchainSupportDetails swapchainSupportDetails;
     const AtlrU8 hasSwapchainSupport =
-      (instance->mode != ATLR_MODE_HEADLESS)
+      (instance->surface != VK_NULL_HANDLE)
       && arePhysicalDeviceExtensionsAvailable(physical, &swapchainExtension, 1)
       && initSwapchainSupportDetails(&swapchainSupportDetails, instance, physical);
 
-    atlrLogMsg(LOG_DEBUG, "Grading physical device \"%s\" ...", properties.deviceName);
+    atlrLog(LOG_DEBUG, "Grading physical device \"%s\" ...", properties.deviceName);
     AtlrI32 grade = 0;
     AtlrU8 isFailureLocked = 0;
 
@@ -303,14 +316,14 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 	  
 	  if (isFailureLocked)
 	  {
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: point-shift by %d) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: point-shift by %d) %s. "
 		       "The physical device is locked into a failing grade regardless.",
 		       criterionName, criterion->pointShift,  met);
 	    break;
 	  }
 	  
 	  grade += criterionValue ? criterion->pointShift : 0;
-	  atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: point-shift by %d) %s. "
+	  atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: point-shift by %d) %s. "
 		     "The current grade is %d.",
 		     criterionName, criterion->pointShift, met, grade);
 	  break;
@@ -322,19 +335,19 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 	  
 	  if (isFailureLocked)
 	  {
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: required) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: required) %s. "
 		       "The physical device is locked into a failing grade regardless.",
 		       criterionName, met);
 	    break;
 	  }
 
 	  if (criterionValue)
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: required) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: required) %s. "
 		       "The current grade is %d.",
 		       criterionName, met, grade);
 	  else
 	  {
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: required) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: required) %s. "
 		       "The physical device is now locked into a failing grade.",
 		       criterionName, met);
 	    isFailureLocked = 1;
@@ -348,7 +361,7 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 	  
 	  if (isFailureLocked)
 	  {
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: forbidden) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: forbidden) %s. "
 		       "The physical device is locked into a failing grade regardless.",
 		       criterionName, met);
 	    break;
@@ -356,13 +369,13 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 
 	  if (criterionValue)
 	  {
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: forbidden) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: forbidden) %s. "
 		       "The physical device is now locked into a failing grade.",
 		       criterionName, met);
 	    isFailureLocked = 1;
 	  }
 	  else
-	    atlrLogMsg(LOG_DEBUG, "Criterion (type: \"%s\", method: forbidden) %s. "
+	    atlrLog(LOG_DEBUG, "Criterion (type: \"%s\", method: forbidden) %s. "
 		       "The current grade is %d.",
 		       criterionName, met, grade);
 	  break;
@@ -371,9 +384,9 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
     }
 
     if (isFailureLocked)
-      atlrLogMsg(LOG_INFO, "The physical device \"%s\" received a failing grade.", properties.deviceName);
+      atlrLog(LOG_INFO, "The physical device \"%s\" received a failing grade.", properties.deviceName);
     else
-      atlrLogMsg(LOG_INFO, "The physical device \"%s\" received a grade of %d.", properties.deviceName, grade);
+      atlrLog(LOG_INFO, "The physical device \"%s\" received a grade of %d.", properties.deviceName, grade);
     if (!isFailureLocked && ((grade > bestGrade) || !foundPhysicalDevice))
     {
       if (foundPhysicalDevice && device->hasSwapchainSupport) deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
@@ -381,7 +394,7 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
       foundPhysicalDevice = 1;
       device->physical = physical;
       device->queueFamilyIndices = queueFamilyIndices;
-      device->hasSwapchainSupport = hasSwapchainSuppor;
+      device->hasSwapchainSupport = hasSwapchainSupport;
       device->swapchainSupportDetails = swapchainSupportDetails;
     }
     else if (hasSwapchainSupport)
@@ -391,14 +404,14 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
 
   if (!foundPhysicalDevice)
   {
-    atlrLogMsg(LOG_FATAL, "An appropriate physical device was never found.");
+    ATLR_LOG_ERROR("An appropriate physical device was never found.");
     return 0;
   }
 
   {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(device->physical, &properties);
-    atlrLogMsg(LOG_INFO, "With the highest grade of %d, the physical device \"%s\" was selected.",
+    atlrLog(LOG_INFO, "With the highest grade of %d, the physical device \"%s\" was selected.",
 	       bestGrade, properties.deviceName);
   }
 
@@ -450,7 +463,7 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   }
   if (vkCreateDevice(device->physical, &deviceInfo, instance->allocator, &device->logical) != VK_SUCCESS)
   {
-    atlrLogMsg(LOG_FATAL, "vkCreateDevice did return VK_SUCCESS.");
+    ATLR_LOG_ERROR("vkCreateDevice did return VK_SUCCESS.");
     if (device->hasSwapchainSupport)
       deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
     return 0;
@@ -465,17 +478,29 @@ AtlrU8 atlrInitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict 
   else
     device->presentQueue = VK_NULL_HANDLE;
 
-  atlrLogMsg(LOG_INFO, "Done initializing antler device.");
+  atlrLog(LOG_INFO, "Done initializing antler device.");
   return 1;
 }
 
-void atlrDeinitDevice(AtlrDevice* restrict device, const AtlrInstance* restrict instance)
+void atlrDeinitDeviceHost(AtlrDevice* device)
 {
-  atlrLogMsg(LOG_INFO, "Deinitializing antler device ...");
+  switch (device->instance->mode)
+  {
+    case ATLR_MODE_HOST_HEADLESS:
+      atlrLog(LOG_INFO, "Deinitializing Antler device in host headless mode ...");
+      break;
+    case ATLR_MODE_HOST_GLFW:
+      atlrLog(LOG_INFO, "Deinitializing Antler device in host GLFW mode ...");
+      break;
+    case ATLR_MODE_HOOK:
+    default:
+      ATLR_LOG_ERROR("Antler is not in a host-type mode.");
+      return;
+  }
 
-  vkDestroyDevice(device->logical, instance->allocator);
+  vkDestroyDevice(device->logical, device->instance->allocator);
   if (device->hasSwapchainSupport)
     deinitSwapchainSupportDetails(&device->swapchainSupportDetails);
 
-  atlrLogMsg(LOG_INFO, "Done deinitializing antler device.");
+  atlrLog(LOG_INFO, "Done deinitializing antler device.");
 }
