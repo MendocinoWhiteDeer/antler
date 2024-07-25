@@ -97,7 +97,7 @@ typedef enum
   
 } AtlrDeviceCriterionMethod;
 
-typedef struct AtlrDeviceCriterion
+typedef struct _AtlrDeviceCriterion
 {
   AtlrDeviceCriterionMethod method;
   AtlrI32 pointShift;
@@ -106,7 +106,7 @@ typedef struct AtlrDeviceCriterion
 
 typedef AtlrDeviceCriterion AtlrDeviceCriteria[ATLR_DEVICE_CRITERION_TOT];
 
-typedef struct AtlrDevice
+typedef struct _AtlrDevice
 {
   const AtlrInstance* instance;
   VkPhysicalDevice physical;
@@ -119,7 +119,7 @@ typedef struct AtlrDevice
   
 } AtlrDevice;
 
-typedef struct AtlrBuffer
+typedef struct _AtlrBuffer
 {
   VkBuffer buffer;
   VkDeviceMemory memory;
@@ -127,33 +127,48 @@ typedef struct AtlrBuffer
   
 } AtlrBuffer;
 
-typedef struct AtlrImage
+typedef struct _AtlrImage
 {
   VkImage image;
   VkDeviceMemory memory;
   VkImageView imageView;
+  VkFormat format;
   AtlrU32 width;
   AtlrU32 height;
   AtlrU32 layerCount;
   
 } AtlrImage;
 
-typedef struct AtlrSingleRecordCommandContext
+typedef struct _AtlrSingleRecordCommandContext
 {
   VkCommandPool commandPool;
   VkFence fence;
   
 } AtlrSingleRecordCommandContext;
 
-typedef struct AtlrSwapchain
+typedef struct _AtlrRenderPass
+{
+  const AtlrDevice* device;
+  VkRenderPass renderPass;
+  AtlrU32 clearValueCount;
+  VkClearValue* clearValues;
+  
+} AtlrRenderPass;
+
+typedef struct _AtlrSwapchain
 {
   const AtlrDevice* device;
   VkSwapchainKHR swapchain;
   VkExtent2D extent;
   VkFormat format;
+
   AtlrU32 imageCount;
   VkImage* images;
   VkImageView* imageViews;
+  AtlrImage depthImage;
+
+  AtlrRenderPass renderPass;
+  VkFramebuffer* framebuffers;
   
 } AtlrSwapchain;
 
@@ -161,22 +176,27 @@ typedef struct AtlrSwapchain
 // Functions
 //
 
+// logger.c
 void atlrLog(AtlrLoggerType, const char* restrict format, ...);
 #define ATLR_LOG_ERROR(format, ...) atlrLog(LOG_ERROR, "{Location: %s:%d}: " format, __FILE__, __LINE__, ##__VA_ARGS__)
 #define ATLR_LOG_FATAL(format, ...) atlrLog(LOG_FATAL, "{Location: %s:%d}: " format, __FILE__, __LINE__, ##__VA_ARGS__) 
 
+// util.c
 AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDevice physical, const AtlrU32 typeFilter, const VkMemoryPropertyFlags properties);
 
+// instance.c
 AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict, const char* restrict name);
 void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict);
 AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict, const int width, const int height, const char* restrict name);
 void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict);
 
+// device.c
 void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict);
 AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType, AtlrDeviceCriterionMethod, AtlrI32 pointShift);
 AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict, const AtlrInstance* restrict, const AtlrDeviceCriterion* restrict);
 void atlrDeinitDeviceHost(AtlrDevice* restrict);
 
+// commands.c
 AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags,
 				   const AtlrDevice* restrict);
 void atlrDeinitCommandPool(const VkCommandPool,
@@ -196,6 +216,7 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecord
 void atlrCommandSetViewport(const VkCommandBuffer, const float width, const float height);
 void atlrCommandSetScissor(const VkCommandBuffer, const VkExtent2D*);
 
+// buffer.c
 AtlrU8 atlrInitBuffer(AtlrBuffer* restrict, const AtlrU64 size, const VkBufferUsageFlags, const VkMemoryPropertyFlags,
 		      const AtlrDevice*);
 void atlrDeinitBuffer(AtlrBuffer* restrict,
@@ -212,7 +233,7 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer*, const AtlrImage* restrict,
 			     const VkOffset2D*, const VkExtent2D*,
 			     const AtlrSingleRecordCommandContext*, const AtlrDevice*);
 
-
+// image.c
 AtlrU8 atlrInitImageView(VkImageView* restrict, const VkImage, const VkImageViewType,
 			 const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount,
 			 const AtlrDevice* restrict);
@@ -224,15 +245,26 @@ AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 hei
 		     const AtlrDevice* restrict);
 void atlrDeinitImage(const AtlrImage* restrict,
 		     const AtlrDevice* restrict);
+AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
 AtlrU8 atlrInitDepthImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
 			  const AtlrDevice* restrict);
-static inline void atlrDeinitDepthImage(const AtlrImage* restrict image,
-					const AtlrDevice* restrict device)
-{
-  atlrDeinitImage(image, device);
-}
+void atlrDeinitDepthImage(const AtlrImage* restrict,
+			  const AtlrDevice* restrict);
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
 				 const AtlrSingleRecordCommandContext* restrict, const AtlrDevice* restrict);
 
+// render-pass.c
+VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkImageLayout finalLayout);
+VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict);
+AtlrU8 atlrInitRenderPass(AtlrRenderPass* restrict,
+			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachment,
+			  const VkAttachmentDescription* restrict depthAttachment,
+			  const AtlrDevice* restrict);
+void atlrDeinitRenderPass(const AtlrRenderPass* restrict);
+void atlrBeginRenderPass(const AtlrRenderPass* restrict,
+			 const VkCommandBuffer, const VkFramebuffer, const VkExtent2D* restrict);
+void atlrEndRenderPass(const VkCommandBuffer);
+
+// swapchain.c
 AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrDevice* restrict);
 void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict);

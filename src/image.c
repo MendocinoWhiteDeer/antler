@@ -20,6 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
+static const VkFormat depthFormatChoices[] =
+{
+  VK_FORMAT_D32_SFLOAT,
+  VK_FORMAT_D32_SFLOAT_S8_UINT,
+  VK_FORMAT_D24_UNORM_S8_UINT
+};
+
 static VkFormat getSupportedImageFormat(const VkPhysicalDevice physical,
 				   AtlrU32 formatChoiceCount, const VkFormat* restrict formatChoices, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
@@ -112,7 +119,8 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
     ATLR_LOG_ERROR("vkCreateImage did not return VK_SUCCESS.");
     return 0;
   }
-  
+
+  image->format = format;
   image->width = width;
   image->height = height;
   image->layerCount = layerCount;
@@ -160,18 +168,20 @@ void atlrDeinitImage(const AtlrImage* restrict image, const AtlrDevice* restrict
   vkDestroyImage(device->logical, image->image, device->instance->allocator);
 }
 
+AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
+{
+  for (AtlrU32 i = 0; i < sizeof(depthFormatChoices) / sizeof(VkFormat); i++)
+    if (image->format == depthFormatChoices[i])
+      return 1;
+  return 0;
+}
+
 AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height,
 			  const AtlrDevice* restrict device)
 {
-  const VkFormat formatChoices[3] =
-  {
-    VK_FORMAT_D32_SFLOAT,
-    VK_FORMAT_D32_SFLOAT_S8_UINT,
-    VK_FORMAT_D24_UNORM_S8_UINT
-  };
   const VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
   const VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  const VkFormat format = getSupportedImageFormat(device->physical, 3, formatChoices, tiling, features);
+  const VkFormat format = getSupportedImageFormat(device->physical, sizeof(depthFormatChoices) / sizeof(VkFormat), depthFormatChoices, tiling, features);
   if (format == VK_FORMAT_UNDEFINED)
   {
     ATLR_LOG_ERROR("getSupportedImageFormat returned VK_FORMAT_UNDEFINED.");
@@ -186,6 +196,14 @@ AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const 
   }
 
   return 1;
+}
+
+void atlrDeinitDepthImage(const AtlrImage* restrict image,
+			  const AtlrDevice* restrict device)
+{
+  if (!atlrIsValidDepthImage(image))
+    ATLR_LOG_ERROR("atlrIsValidDepthImage returned 0.");
+  atlrDeinitImage(image, device);
 }
 
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout,

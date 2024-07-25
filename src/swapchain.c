@@ -156,30 +156,74 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
     atlrLog(LOG_ERROR, "vkCreateSwapchainKHR (first call) did not return VK_SUCCESS.");
     return 0;
   }
-  swapchain->images = malloc(imageCount * sizeof(VkImage));
-  if (vkGetSwapchainImagesKHR(device->logical, swapchain->swapchain, &imageCount, swapchain->images) != VK_SUCCESS)
+  VkImage* images = malloc(imageCount * sizeof(VkImage));
+  if (vkGetSwapchainImagesKHR(device->logical, swapchain->swapchain, &imageCount, images) != VK_SUCCESS)
   {
     atlrLog(LOG_ERROR, "vkCreateSwapchainKHR (second call) did not return VK_SUCCESS.");
     return 0;
   }
   swapchain->imageCount = imageCount;
-
-  swapchain->imageViews = malloc(imageCount * sizeof(VkImageView));
+  swapchain->images = images;
+  
+  VkImageView* imageViews = malloc(imageCount * sizeof(VkImageView));
   for (AtlrU32 i = 0; i < imageCount; i++)
   {
-    if (!atlrInitImageView(swapchain->imageViews + i, swapchain->images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, device))
+    if (!atlrInitImageView(imageViews + i, images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, device))
     {
       ATLR_LOG_ERROR("atlrInitImageView returned 0.");
       return 0;
     }
   }
+  swapchain->imageViews = imageViews;
+
+  if (!atlrInitDepthImage(&swapchain->depthImage, extent.width, extent.height, device))
+  {
+    ATLR_LOG_ERROR("atlrInitDepthImage returned 0.");
+    return 0;
+  }
+
+  const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+  const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(&swapchain->depthImage);
+  if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &depthAttachment, device))
+  {
+    ATLR_LOG_ERROR("atlrInitRenderPass returned 0.");
+    return 0;
+  }
+
+  VkFramebuffer* framebuffers = malloc(imageCount * sizeof(VkFramebuffer));
+  for (AtlrU32 i = 0; i < imageCount; i++)
+  {
+    const VkImageView framebufferAttachments[2] =
+    {
+      imageViews[i],
+      swapchain->depthImage.imageView
+    };
+    const VkFramebufferCreateInfo framebufferInfo =
+    {
+      .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+      .pNext = NULL,
+      .flags = 0,
+      .renderPass = swapchain->renderPass.renderPass,
+      .attachmentCount = 2,
+      .pAttachments = framebufferAttachments,
+      .width = extent.width,
+      .height = extent.height,
+      .layers = 1
+    };
+    if (vkCreateFramebuffer(device->logical, &framebufferInfo, device->instance->allocator, framebuffers + i) != VK_SUCCESS)
+    {
+      ATLR_LOG_ERROR("vkCreateFramebuffer did not return VK_SUCCESS.");
+      return 0;
+    }
+  }
+  swapchain->framebuffers = framebuffers;
 
   atlrLog(LOG_INFO, "Done initializing Antler swapchain.");
   return 1;
 }
 
 void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
-{
+{ 
   const AtlrDevice* device = swapchain->device;
   if (device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
@@ -187,6 +231,13 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
     return;
   }
   atlrLog(LOG_INFO, "Deinitializing Antler swapchain in host GLFW mode ...");
+
+  for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
+    vkDestroyFramebuffer(device->logical, swapchain->framebuffers[i], device->instance->allocator);
+
+  atlrDeinitRenderPass(&swapchain->renderPass);
+
+  atlrDeinitImage(&swapchain->depthImage, device);
   
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
     atlrDeinitImageView(swapchain->imageViews[i], device);

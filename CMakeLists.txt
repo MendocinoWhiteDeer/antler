@@ -16,7 +16,7 @@ message("Build type: ${CMAKE_BUILD_TYPE}")
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall -DATLR_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 
-add_library(antler SHARED
+add_library(antler
   "src/logger.c"
   "src/util.c"
   "src/instance.c"
@@ -24,6 +24,7 @@ add_library(antler SHARED
   "src/commands.c"
   "src/buffer.c"
   "src/image.c"
+  "src/render-pass.c"
   "src/swapchain.c")
 target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/src")
 

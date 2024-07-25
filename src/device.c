@@ -186,6 +186,10 @@ AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDevice
 
 AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restrict instance, const AtlrDeviceCriterion* restrict criteria)
 {
+  {
+    AtlrDevice temp = {};
+    *device = temp;
+  }
   switch (instance->mode)
   {
     case ATLR_MODE_HOST_HEADLESS:

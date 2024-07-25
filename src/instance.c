@@ -187,6 +187,10 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
 
 AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char* restrict name)
 {
+  {
+    AtlrInstance temp = {};
+    *instance = temp;
+  }
   atlrLog(LOG_INFO, "Initializing Antler instance in host headless mode ...");
   instance->mode = ATLR_MODE_HOST_HEADLESS;
 
@@ -277,6 +281,10 @@ void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict instance)
 
 AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width, const int height, const char* restrict name)
 {
+  {
+    AtlrInstance temp = {};
+    *instance = temp;
+  }
   atlrLog(LOG_INFO, "Initializing Antler instance in GLFW mode ...");
   instance->mode = ATLR_MODE_HOST_GLFW;
   
