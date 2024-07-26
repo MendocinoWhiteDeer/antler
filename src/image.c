@@ -44,9 +44,9 @@ static VkFormat getSupportedImageFormat(const VkPhysicalDevice physical,
   return VK_FORMAT_UNDEFINED;
 }
 
-AtlrU8 atlrInitImageView(VkImageView* restrict imageView, const VkImage image,
-			 const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspectFlags, const AtlrU32 layerCount,
-			 const AtlrDevice* restrict device)
+VkImageView atlrInitImageView(const VkImage image,
+			      const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspectFlags, const AtlrU32 layerCount,
+			      const AtlrDevice* restrict device)
 {
   const VkImageViewCreateInfo imageViewInfo =
   {
@@ -72,13 +72,14 @@ AtlrU8 atlrInitImageView(VkImageView* restrict imageView, const VkImage image,
       .layerCount = layerCount
     }
   };
-  if(vkCreateImageView(device->logical, &imageViewInfo, device->instance->allocator, imageView) != VK_SUCCESS)
+  VkImageView imageView;
+  if(vkCreateImageView(device->logical, &imageViewInfo, device->instance->allocator, &imageView) != VK_SUCCESS)
   {
     ATLR_LOG_ERROR("vkCreateImageView did not return VK_SUCCESS.");
-    return 0;
+    return VK_NULL_HANDLE;
   }
 
-  return 1;
+  return imageView;
 }
 
 void atlrDeinitImageView(const VkImageView imageView,
@@ -152,11 +153,13 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
     return 0;
   }
 
-  if (!atlrInitImageView(&image->imageView, image->image, viewType, format, aspectFlags, layerCount, device))
+  VkImageView imageView = atlrInitImageView(image->image, viewType, format, aspectFlags, layerCount, device);
+  if (imageView == VK_NULL_HANDLE)
   {
-    ATLR_LOG_ERROR("atlrInitImageView returned 0.");
+    ATLR_LOG_ERROR("atlrInitImageView returned VK_NULL_HANDLE.");
     return 0;
   }
+  image->imageView = imageView;
 
   return 1;
 }

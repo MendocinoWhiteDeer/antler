@@ -168,11 +168,13 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
   VkImageView* imageViews = malloc(imageCount * sizeof(VkImageView));
   for (AtlrU32 i = 0; i < imageCount; i++)
   {
-    if (!atlrInitImageView(imageViews + i, images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, device))
+    VkImageView imageView = atlrInitImageView(images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, device);
+    if (imageView == VK_NULL_HANDLE)
     {
-      ATLR_LOG_ERROR("atlrInitImageView returned 0.");
+      ATLR_LOG_ERROR("atlrInitImageView returned VK_NULL_HANDLE.");
       return 0;
     }
+    imageViews[i] = imageView;
   }
   swapchain->imageViews = imageViews;
 

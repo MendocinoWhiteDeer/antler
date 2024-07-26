@@ -234,9 +234,9 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer*, const AtlrImage* restrict,
 			     const AtlrSingleRecordCommandContext*, const AtlrDevice*);
 
 // image.c
-AtlrU8 atlrInitImageView(VkImageView* restrict, const VkImage, const VkImageViewType,
-			 const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount,
-			 const AtlrDevice* restrict);
+VkImageView atlrInitImageView(const VkImage,
+			      const VkImageViewType, const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount,
+			      const AtlrDevice* restrict);
 void atlrDeinitImageView(const VkImageView,
 			 const AtlrDevice* restrict);
 AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
@@ -253,6 +253,20 @@ void atlrDeinitDepthImage(const AtlrImage* restrict,
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
 				 const AtlrSingleRecordCommandContext* restrict, const AtlrDevice* restrict);
 
+// pipeline.c
+VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice* restrict);
+void atlrDeinitShaderModule(const VkShaderModule module, const AtlrDevice* restrict);
+VkPipelineShaderStageCreateInfo atlrInitPipelineVertexShaderStageInfo(const VkShaderModule);
+VkPipelineShaderStageCreateInfo atlrInitPipelineFragmentShaderStageInfo(const VkShaderModule);
+VkPipelineInputAssemblyStateCreateInfo atlrInitPipelineInputAssemblyStateInfo();
+VkPipelineViewportStateCreateInfo atlrInitPipelineViewportStateInfo();
+VkPipelineRasterizationStateCreateInfo atlrInitPipelineRasterizationStateInfo();
+VkPipelineMultisampleStateCreateInfo atlrInitPipelineMultisampleStateInfo();
+VkPipelineDepthStencilStateCreateInfo atlrInitPipelineDepthStencilStateInfo();
+VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentState();
+VkPipelineColorBlendStateCreateInfo atlrInitPipelineColorBlendStateInfo(const VkPipelineColorBlendAttachmentState* restrict);
+VkPipelineDynamicStateCreateInfo atlrInitPipelineDynamicStateInfo();
+
 // render-pass.c
 VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkImageLayout finalLayout);
 VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict);
@@ -263,7 +277,7 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* restrict,
 void atlrDeinitRenderPass(const AtlrRenderPass* restrict);
 void atlrBeginRenderPass(const AtlrRenderPass* restrict,
 			 const VkCommandBuffer, const VkFramebuffer, const VkExtent2D* restrict);
-void atlrEndRenderPass(const VkCommandBuffer);
+void atlrEndRendberPass(const VkCommandBuffer);
 
 // swapchain.c
 AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrDevice* restrict);
