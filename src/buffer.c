@@ -36,7 +36,7 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   };
   if (vkCreateBuffer(device->logical, &bufferInfo, device->instance->allocator, &buffer->buffer) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateBuffer did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateBuffer did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -45,7 +45,7 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   AtlrU32 memoryTypeIndex;
   if (!atlrGetVulkanMemoryTypeIndex(&memoryTypeIndex, device->physical, memoryRequirements.memoryTypeBits, properties))
   {
-    ATLR_LOG_ERROR("atlrGetVulkanMemoryTypeIndex returned 0.");
+    ATLR_ERROR_MSG("atlrGetVulkanMemoryTypeIndex returned 0.");
     return 0;
   }
   const VkMemoryAllocateInfo memoryAllocateInfo =
@@ -57,13 +57,13 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   };
   if (vkAllocateMemory(device->logical, &memoryAllocateInfo, device->instance->allocator, &buffer->memory) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkAllocateMemory did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkAllocateMemory did not return VK_SUCCESS.");
     return 0;
   }
 
   if (vkBindBufferMemory(device->logical, buffer->buffer, buffer->memory, 0) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkBindBufferMemory did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkBindBufferMemory did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -83,7 +83,7 @@ AtlrU8 atlrMapBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const At
 {
   if (vkMapMemory(device->logical, buffer->memory, offset, size, flags, &buffer->data) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkMapMemory did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkMapMemory did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -101,7 +101,7 @@ AtlrU8 atlrLoadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const A
 {
   if (!atlrMapBuffer(buffer, offset, size, flags, device))
   {
-    ATLR_LOG_ERROR("atlrMapBuffer returned 0.");
+    ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
     return 0;
   }
   memcpy(buffer->data, data, size);
@@ -114,9 +114,9 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
 		      const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* commandContext)
 {
   VkCommandBuffer commandBuffer;
-  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext, device))
+  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
   {
-    ATLR_LOG_ERROR("atlrBeginSingleRecordCommands returned 0.");
+    ATLR_ERROR_MSG("atlrBeginSingleRecordCommands returned 0.");
     return 0;
   }
 
@@ -128,9 +128,9 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
   };
   vkCmdCopyBuffer(commandBuffer, src->buffer, dst->buffer, 1, &copyRegion);
 
-  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext, device))
+  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext))
   {
-    ATLR_LOG_ERROR("atlrEndSingleRecordCommands returned 0.");
+    ATLR_ERROR_MSG("atlrEndSingleRecordCommands returned 0.");
     return 0;
   }
 
@@ -142,9 +142,9 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict
 			     const AtlrSingleRecordCommandContext* commandContext, const AtlrDevice* device)
 {
   VkCommandBuffer commandBuffer;
-  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext, device))
+  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
   {
-    ATLR_LOG_ERROR("atlrBeginSingleRecordCommands returned 0.");
+    ATLR_ERROR_MSG("atlrBeginSingleRecordCommands returned 0.");
     return 0;
   }
 
@@ -175,9 +175,9 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict
   };
   vkCmdCopyBufferToImage(commandBuffer, buffer->buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext, device))
+  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext))
   {
-    ATLR_LOG_ERROR("atlrEndSingleRecordCommands returned 0.");
+    ATLR_ERROR_MSG("atlrEndSingleRecordCommands returned 0.");
     return 0;
   }
 

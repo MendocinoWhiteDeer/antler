@@ -4,6 +4,26 @@ License: LGPL 3.0
 
 A convenience library for Vulkan graphics programming. Not ready for use.
 
+To do a debug build ...
+
+#+BEGIN_SRC shell
+cmake -S . -B debug-build -DCMAKE_BUILD_TYPE=Debug
+cd debug-build
+make
+#+END_SRC
+
+To do a release build ...
+
+#+BEGIN_SRC shell
+cmake -S . -B release-build
+cd release-build
+make
+#+END_SRC
+
+Make sure the working directory is the same as the binary directory when running samples.
+Otherwise, the sample program will have trouble finding the needed resources to run properly.
+The different sample programs are documented in this README file.
+
 ** Relevant Learning Materials
 
 https://vulkan-tutorial.com/
@@ -16,7 +36,15 @@ https://docs.vulkan.org/guide/latest/vulkan_spec.html
 
 ** Dependencies
 *** Submodules
+
 GLFW: https://github.com/glfw/glfw
 
 *** System installation
+
 Vulkan
+
+** Samples
+*** Hello Triangle
+
+A basic program to display a colored triangle.
+There are no vertex buffers; the vertex data is hardcoded into the vertex shader.

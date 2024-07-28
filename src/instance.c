@@ -25,7 +25,7 @@ static AtlrU8 initAppInfo(VkApplicationInfo* appInfo, const char* name)
   AtlrU32 apiVersion = VK_API_VERSION_1_3;
   if (vkEnumerateInstanceVersion(&apiVersion) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("Vulkan version 1.3 is not supported.");
+    ATLR_ERROR_MSG("Vulkan version 1.3 is not supported.");
     return 0;
   }
 
@@ -49,13 +49,13 @@ static AtlrU8 isValidationLayerAvailable()
   AtlrU32 availableLayerCount = 0;
   if(vkEnumerateInstanceLayerProperties(&availableLayerCount, NULL) != VK_SUCCESS)
     {
-      ATLR_LOG_ERROR("vkEnumerateInstanceLayerProperties (first call) did not return VK_SUCCESS.");
+      ATLR_ERROR_MSG("vkEnumerateInstanceLayerProperties (first call) did not return VK_SUCCESS.");
       return 0;
     }
   VkLayerProperties* availableLayers = malloc(availableLayerCount * sizeof(VkLayerProperties));
   if(vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers) != VK_SUCCESS)
     {
-      ATLR_LOG_ERROR("vkEnumerateInstanceLayerProperties (second call) did not return VK_SUCCESS.");
+      ATLR_ERROR_MSG("vkEnumerateInstanceLayerProperties (second call) did not return VK_SUCCESS.");
       free(availableLayers);
       return 0;
     }
@@ -81,19 +81,19 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   switch(msgSeverity)
   {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-      atlrLog(LOG_TRACE, str, callbackData->pMessage);
+      atlrLog(ATLR_LOG_TRACE, str, callbackData->pMessage);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-      atlrLog(LOG_INFO, str, callbackData->pMessage);
+      atlrLog(ATLR_LOG_INFO, str, callbackData->pMessage);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-      atlrLog(LOG_WARN, str, callbackData->pMessage);
+      atlrLog(ATLR_LOG_WARN, str, callbackData->pMessage);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-      atlrLog(LOG_ERROR, str, callbackData->pMessage);
+      atlrLog(ATLR_LOG_ERROR, str, callbackData->pMessage);
       break;
     default:
-      atlrLog(LOG_ERROR, "Invalid value \"%d\" for the message severity in the Vulkan debug callback.", msgSeverity);
+      atlrLog(ATLR_LOG_ERROR, "Invalid value \"%d\" for the message severity in the Vulkan debug callback.", msgSeverity);
   }
   return VK_FALSE;
 }
@@ -122,7 +122,7 @@ static AtlrU8 initDebugMessenger(AtlrInstance* restrict instance, const VkDebugU
     (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->instance, "vkCreateDebugUtilsMessengerEXT");
   if (!pfnCreate)
   {
-    ATLR_LOG_ERROR("vkGetInstanceProcAddr returned 0.");
+    ATLR_ERROR_MSG("vkGetInstanceProcAddr returned 0.");
     return 0;
   }
   if (pfnCreate(instance->instance, debugInfo, instance->allocator, &instance->debugMessenger) != VK_SUCCESS)
@@ -136,7 +136,7 @@ static void deinitDebugMessenger(const AtlrInstance* restrict instance)
   PFN_vkDestroyDebugUtilsMessengerEXT pfnDestroy =
     (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance->instance, "vkDestroyDebugUtilsMessengerEXT");
   if (!pfnDestroy)
-    ATLR_LOG_ERROR("vkGetInstanceProcAddr returned 0.");
+    ATLR_ERROR_MSG("vkGetInstanceProcAddr returned 0.");
   pfnDestroy(instance->instance, instance->debugMessenger, instance->allocator);
 }
 
@@ -147,18 +147,18 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
   AtlrU32 availableExtensionCount = 0;
   if(vkEnumerateInstanceExtensionProperties(NULL, &availableExtensionCount, NULL) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkEnumerateInstanceExtensionProperties (first call) did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkEnumerateInstanceExtensionProperties (first call) did not return VK_SUCCESS.");
     return 0;
   }
   if (!availableExtensionCount)
   {
-    ATLR_LOG_ERROR("No available extensions.");
+    ATLR_ERROR_MSG("No available extensions.");
     return 0;
   }
   VkExtensionProperties* availableExtensions = malloc(availableExtensionCount * sizeof(VkExtensionProperties));
   if(vkEnumerateInstanceExtensionProperties(NULL, &availableExtensionCount, availableExtensions) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkEnumerateInstanceExtensionProperties (second call) did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkEnumerateInstanceExtensionProperties (second call) did not return VK_SUCCESS.");
     free(availableExtensions);
     return 0;
    }
@@ -171,12 +171,12 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
       if (!strcmp(extensions[i], availableExtensions[j].extensionName))
 	{
 	  found = 1;
-	  atlrLog(LOG_DEBUG, "Vulkan instance extension \"%s\" is available.", extensions[i]);
+	  atlrLog(ATLR_LOG_DEBUG, "Vulkan instance extension \"%s\" is available.", extensions[i]);
 	  break;
 	}
     if (!found)
       {
-	atlrLog(LOG_DEBUG, "Vulkan instance extension \"%s\" is unavailable.", extensions[i]);
+	atlrLog(ATLR_LOG_DEBUG, "Vulkan instance extension \"%s\" is unavailable.", extensions[i]);
 	extensionsFound = 0;
       }
   }
@@ -191,7 +191,7 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
     AtlrInstance temp = {};
     *instance = temp;
   }
-  atlrLog(LOG_INFO, "Initializing Antler instance in host headless mode ...");
+  atlrLog(ATLR_LOG_INFO, "Initializing Antler instance in host headless mode ...");
   instance->mode = ATLR_MODE_HOST_HEADLESS;
 
   VkInstanceCreateInfo instanceInfo = {};
@@ -200,20 +200,20 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
   VkApplicationInfo appInfo = {};
   if (!initAppInfo(&appInfo, name))
   {
-    ATLR_LOG_ERROR("initAppInfo returned 0.");
+    ATLR_ERROR_MSG("initAppInfo returned 0.");
     return 0;
   }
   instanceInfo.pApplicationInfo = &appInfo;
 
   // validation layer
 #ifdef ATLR_DEBUG
-  atlrLog(LOG_DEBUG, "Requiring Vulkan validation layer.");
+  atlrLog(ATLR_LOG_DEBUG, "Requiring Vulkan validation layer.");
   if (!isValidationLayerAvailable())
   {
-    ATLR_LOG_ERROR("isValidationLayerAvailable returned 0.");
+    ATLR_ERROR_MSG("isValidationLayerAvailable returned 0.");
     return 0;
   }
-  atlrLog(LOG_DEBUG, "Vulkan validation layer is available.");
+  atlrLog(ATLR_LOG_DEBUG, "Vulkan validation layer is available.");
   instanceInfo.enabledLayerCount = 1;
   instanceInfo.ppEnabledLayerNames = &validationLayer;
 
@@ -230,10 +230,10 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
   extensionCount++;
 #endif
   for (AtlrU32 i = 0; i < extensionCount; i++)
-    atlrLog(LOG_DEBUG, "Requiring Vulkan instance extension \"%s\".", extensions[i]);
+    atlrLog(ATLR_LOG_DEBUG, "Requiring Vulkan instance extension \"%s\".", extensions[i]);
   if (!areInstanceExtensionsAvailable(extensions, extensionCount))
   {
-    ATLR_LOG_ERROR("areInstanceExtensionsAvailable returned 0.");
+    ATLR_ERROR_MSG("areInstanceExtensionsAvailable returned 0.");
     free(extensions);
     return 0;
   }
@@ -243,7 +243,7 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
   // finish initializing instance
   if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->instance) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateInstance did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateInstance did not return VK_SUCCESS.");
     free(extensions);
     return 0;
   }
@@ -251,14 +251,14 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
 #ifdef ATLR_DEBUG
   if (!initDebugMessenger(instance, &debugInfo))
   {
-    ATLR_LOG_ERROR("initDebugMessenger returned 0.");
+    ATLR_ERROR_MSG("initDebugMessenger returned 0.");
     return 0;
   }
 #endif
   instance->surface = VK_NULL_HANDLE;
   instance->data = NULL;
 
-  atlrLog(LOG_INFO, "Done initializing Antler instance.");
+  atlrLog(ATLR_LOG_INFO, "Done initializing Antler instance.");
   return 1;
 }
 
@@ -266,17 +266,17 @@ void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict instance)
 {
   if (instance->mode != ATLR_MODE_HOST_HEADLESS)
   {
-    ATLR_LOG_ERROR("Antler is not in host headless mode.");
+    ATLR_ERROR_MSG("Antler is not in host headless mode.");
     return;
   }
-  atlrLog(LOG_INFO, "Deinitializing antler instance in host headless mode ...");
+  atlrLog(ATLR_LOG_INFO, "Deinitializing antler instance in host headless mode ...");
 
 #ifdef ATLR_DEBUG
   deinitDebugMessenger(instance);
 #endif
   vkDestroyInstance(instance->instance, instance->allocator);
    
-  atlrLog(LOG_INFO, "Done deinitializing Antler instance.");
+  atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }
 
 AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width, const int height, const char* restrict name)
@@ -285,19 +285,19 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
     AtlrInstance temp = {};
     *instance = temp;
   }
-  atlrLog(LOG_INFO, "Initializing Antler instance in GLFW mode ...");
+  atlrLog(ATLR_LOG_INFO, "Initializing Antler instance in GLFW mode ...");
   instance->mode = ATLR_MODE_HOST_GLFW;
   
   if (!glfwInit())
   {
-    ATLR_LOG_ERROR("glfwInit returned GLFW_FALSE.");
+    ATLR_ERROR_MSG("glfwInit returned GLFW_FALSE.");
     return 0;
   }
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   GLFWwindow* window = glfwCreateWindow(width, height, name, NULL, NULL);
   if (!window)
   {
-    ATLR_LOG_ERROR("glfwCreateWindow returned 0.");
+    ATLR_ERROR_MSG("glfwCreateWindow returned 0.");
     return 0;
   }
   
@@ -307,20 +307,20 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
   VkApplicationInfo appInfo = {};
   if (!initAppInfo(&appInfo, name))
   {
-    ATLR_LOG_ERROR("initAppInfo returned 0.");
+    ATLR_ERROR_MSG("initAppInfo returned 0.");
     return 0;
   }
   instanceInfo.pApplicationInfo = &appInfo;
 
   // validation layer
 #ifdef ATLR_DEBUG
-  atlrLog(LOG_DEBUG, "Requiring Vulkan validation layer.");
+  atlrLog(ATLR_LOG_DEBUG, "Requiring Vulkan validation layer.");
   if (!isValidationLayerAvailable())
   {
-    ATLR_LOG_ERROR("isValidationLayerAvailable returned 0.");
+    ATLR_ERROR_MSG("isValidationLayerAvailable returned 0.");
     return 0;
   }
-  atlrLog(LOG_DEBUG, "Vulkan validation layer is available.");
+  atlrLog(ATLR_LOG_DEBUG, "Vulkan validation layer is available.");
   instanceInfo.enabledLayerCount = 1;
   instanceInfo.ppEnabledLayerNames = &validationLayer;
 
@@ -339,10 +339,10 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
   extensionCount++;
 #endif
   for (AtlrU32 i = 0; i < extensionCount; i++)
-    atlrLog(LOG_DEBUG, "Requiring Vulkan instance extension \"%s\".", extensions[i]);
+    atlrLog(ATLR_LOG_DEBUG, "Requiring Vulkan instance extension \"%s\".", extensions[i]);
   if (!areInstanceExtensionsAvailable(extensions, extensionCount))
   {
-    ATLR_LOG_ERROR("areInstanceExtensionsAvailable returned 0.");
+    ATLR_ERROR_MSG("areInstanceExtensionsAvailable returned 0.");
     free(extensions);
     return 0;
   }
@@ -352,7 +352,7 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
   // finish initializing instance
   if (vkCreateInstance(&instanceInfo, instance->allocator, &instance->instance) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateInstance did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateInstance did not return VK_SUCCESS.");
     free(extensions);
     return 0;
   }
@@ -360,18 +360,18 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
 #ifdef ATLR_DEBUG
   if (!initDebugMessenger(instance, &debugInfo))
   {
-    ATLR_LOG_ERROR("initDebugMessenger returned 0.");
+    ATLR_ERROR_MSG("initDebugMessenger returned 0.");
     return 0;
   }
 #endif
   if (glfwCreateWindowSurface(instance->instance, window, instance->allocator, &instance->surface) != VK_SUCCESS)
     {
-      ATLR_LOG_ERROR("glfwCreateWindowSurface did not return VK_SUCCESS.");
+      ATLR_ERROR_MSG("glfwCreateWindowSurface did not return VK_SUCCESS.");
       return 0;
     }
   instance->data = window;
 
-  atlrLog(LOG_INFO, "Done initializing Antler instance.");
+  atlrLog(ATLR_LOG_INFO, "Done initializing Antler instance.");
   return 1;
 }
 
@@ -379,10 +379,10 @@ void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict instance)
 {
   if (instance->mode != ATLR_MODE_HOST_GLFW)
   {
-    ATLR_LOG_ERROR("Antler is not in host GLFW mode.");
+    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
     return;
   }
-  atlrLog(LOG_INFO, "Deinitializing Antler instance in host GLFW mode ...");
+  atlrLog(ATLR_LOG_INFO, "Deinitializing Antler instance in host GLFW mode ...");
 
   vkDestroySurfaceKHR(instance->instance, instance->surface, instance->allocator);
 #ifdef ATLR_DEBUG
@@ -394,5 +394,5 @@ void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict instance)
   glfwDestroyWindow(window);
   glfwTerminate();
    
-  atlrLog(LOG_INFO, "Done deinitializing Antler instance.");
+  atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }

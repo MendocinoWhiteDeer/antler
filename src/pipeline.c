@@ -32,7 +32,7 @@ VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice*
   FILE* file = fopen(path, "rb");;
   if (!file)
   {
-    ATLR_LOG_ERROR("Failed to open file at path \"%s\".", path);
+    ATLR_ERROR_MSG("Failed to open file at path \"%s\".", path);
     return VK_NULL_HANDLE;
   }
   fseek(file, 0, SEEK_END);
@@ -89,6 +89,20 @@ VkPipelineShaderStageCreateInfo atlrInitPipelineFragmentShaderStageInfo(const Vk
     .pNext = NULL,
     .flags = 0,
     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+    .pName = "main",
+    .module = module,
+    .pSpecializationInfo = NULL
+  };
+}
+
+VkPipelineShaderStageCreateInfo atlrInitPipelineComputeShaderStageInfo(const VkShaderModule module)
+{
+  return (VkPipelineShaderStageCreateInfo)
+  {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+    .pNext = NULL,
+    .flags = 0,
+    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
     .pName = "main",
     .module = module,
     .pSpecializationInfo = NULL
@@ -166,7 +180,7 @@ VkPipelineDepthStencilStateCreateInfo atlrInitPipelineDepthStencilStateInfo()
     .flags = 0,
     .depthTestEnable = VK_TRUE,
     .depthWriteEnable = VK_TRUE,
-    .depthCompareOp = VK_COMPARE_OP_GREATER, // reverse-z convention
+    .depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL, // reverse-z convention
     .depthBoundsTestEnable = VK_FALSE,
     .stencilTestEnable = VK_FALSE,
     .front = {},

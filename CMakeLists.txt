@@ -37,3 +37,35 @@ target_link_libraries(antler PUBLIC glfw)
 # Vulkan
 target_include_directories(antler PUBLIC "${Vulkan_INCLUDE_DIRS}")
 target_link_libraries(antler PUBLIC "${Vulkan_LIBRARIES}")
+
+# shader compilation
+function (compile_shader input_file output_file)
+  add_custom_command(
+    OUTPUT "${ARGV1}"
+    COMMAND "${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}" -V "${ARGV0}" -o "${ARGV1}"
+    DEPENDS "${ARGV0}"
+    COMMENT "Compiling glsl shader ${ARGV0} to ${ARGV1}")
+endfunction()
+
+# samples
+set(SAMPLES_DIR "${PROJECT_SOURCE_DIR}/samples")
+set(SAMPLES_BIN_DIR "${CMAKE_BINARY_DIR}/samples")
+file(MAKE_DIRECTORY "${SAMPLES_BIN_DIR}")
+
+# hello-triangle sample
+set(HELLO_TRIANGLE_SAMPLE_DIR "${SAMPLES_DIR}/hello-triangle")
+set(HELLO_TRIANGLE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/hello-triangle")
+file(MAKE_DIRECTORY "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}")
+add_executable(hello-triangle-sample "${HELLO_TRIANGLE_SAMPLE_DIR}/main.c")
+set_target_properties(hello-triangle-sample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}")
+target_link_libraries(hello-triangle-sample PRIVATE antler)
+compile_shader(
+  "${HELLO_TRIANGLE_SAMPLE_DIR}/triangle.vert"
+  "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-vert.spv")
+compile_shader(
+  "${HELLO_TRIANGLE_SAMPLE_DIR}/triangle.frag"
+  "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-frag.spv")
+add_custom_target(hello-triangle-shaders ALL DEPENDS
+  "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-vert.spv"
+  "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-frag.spv")

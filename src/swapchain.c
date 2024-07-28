@@ -71,36 +71,39 @@ static VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR* restrict capabilitie
   return extent;
 }
 
-AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDevice* restrict device)
+AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8 initRenderPass,
+				 const AtlrDevice* restrict device)
 {
-  VkPhysicalDeviceProperties properties;
-  vkGetPhysicalDeviceProperties(device->physical, &properties);
   if (device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
-    ATLR_LOG_ERROR("Atler is not in host GLFW mode.");
+    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
     return 0;
-  }
+  } 
+  VkPhysicalDeviceProperties properties;
+  vkGetPhysicalDeviceProperties(device->physical, &properties);
   if (!device->queueFamilyIndices.isGraphics || !device->queueFamilyIndices.isPresent)
   {
-    ATLR_LOG_ERROR("The AtlrDevice with handle \"%s\" lacks queue family support.", properties.deviceName);
+    ATLR_ERROR_MSG("The AtlrDevice with handle \"%s\" lacks queue family support.", properties.deviceName);
     return 0;
   }
   if (!device->hasSwapchainSupport)
   {
-    ATLR_LOG_ERROR("The AtlrDevice with handle \"%s\" lacks swapchain support.", properties.deviceName);
+    ATLR_ERROR_MSG("The AtlrDevice with handle \"%s\" lacks swapchain support.", properties.deviceName);
     return 0;
   }
-  atlrLog(LOG_INFO, "Initializing Antler swapchain in host GLFW mode ...");
+  atlrLog(ATLR_LOG_INFO, "Initializing Antler swapchain in host GLFW mode ...");
   swapchain->device = device;
 
-  const AtlrSwapchainSupportDetails* supportDetails = &device->swapchainSupportDetails;
-  const VkExtent2D extent = getExtent(&supportDetails->capabilities, device->instance);
-  const VkSurfaceFormatKHR surfaceFormat = getSurfaceFormat(supportDetails->formats, supportDetails->formatCount);
-  const VkPresentModeKHR presentMode = getPresetMode(supportDetails->presentModes, supportDetails->presentModeCount);
+  // support details need to be initialized whenever the swap chain is (re)created, the support details can change on window resize
+  AtlrSwapchainSupportDetails supportDetails;
+  atlrInitSwapchainSupportDetails(&supportDetails, device->instance, device->physical);
+  const VkExtent2D extent = getExtent(&supportDetails.capabilities, device->instance);
+  const VkSurfaceFormatKHR surfaceFormat = getSurfaceFormat(supportDetails.formats, supportDetails.formatCount);
+  const VkPresentModeKHR presentMode = getPresetMode(supportDetails.presentModes, supportDetails.presentModeCount);
 
-  // determine the image count, when the max count is zero it means pretty much unrestricted amount of images is allowed
-  const AtlrU32 maxImageCount = supportDetails->capabilities.maxImageCount;
-  AtlrU32 imageCount = supportDetails->capabilities.minImageCount + 1; // add 1 to min to prevent waiting
+  // determine the image count, when the max count is zero it pretty much means an unrestricted amount of images is allowed
+  const AtlrU32 maxImageCount = supportDetails.capabilities.maxImageCount;
+  AtlrU32 imageCount = supportDetails.capabilities.minImageCount + 1; // add 1 to min to prevent waiting
   if (maxImageCount && (imageCount > maxImageCount))
     imageCount = maxImageCount;
 
@@ -116,7 +119,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
     .imageExtent = extent,
     .imageArrayLayers = 1,
     .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    .preTransform = supportDetails->capabilities.currentTransform,
+    .preTransform = supportDetails.capabilities.currentTransform,
     .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
     .presentMode = presentMode,
     .clipped = VK_TRUE,
@@ -145,21 +148,22 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
 
   if (vkCreateSwapchainKHR(device->logical, &swapchainInfo, device->instance->allocator, &swapchain->swapchain) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateSwapchainKHR did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateSwapchainKHR did not return VK_SUCCESS.");
     return 0;
   }
   swapchain->format = surfaceFormat.format;
   swapchain->extent = extent;
+  atlrDeinitSwapchainSupportDetails(&supportDetails);
 
   if (vkGetSwapchainImagesKHR(device->logical, swapchain->swapchain, &imageCount, NULL) != VK_SUCCESS)
   {
-    atlrLog(LOG_ERROR, "vkCreateSwapchainKHR (first call) did not return VK_SUCCESS.");
+    atlrLog(ATLR_LOG_ERROR, "vkCreateSwapchainKHR (first call) did not return VK_SUCCESS.");
     return 0;
   }
   VkImage* images = malloc(imageCount * sizeof(VkImage));
   if (vkGetSwapchainImagesKHR(device->logical, swapchain->swapchain, &imageCount, images) != VK_SUCCESS)
   {
-    atlrLog(LOG_ERROR, "vkCreateSwapchainKHR (second call) did not return VK_SUCCESS.");
+    atlrLog(ATLR_LOG_ERROR, "vkCreateSwapchainKHR (second call) did not return VK_SUCCESS.");
     return 0;
   }
   swapchain->imageCount = imageCount;
@@ -171,7 +175,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
     VkImageView imageView = atlrInitImageView(images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, device);
     if (imageView == VK_NULL_HANDLE)
     {
-      ATLR_LOG_ERROR("atlrInitImageView returned VK_NULL_HANDLE.");
+      ATLR_ERROR_MSG("atlrInitImageView returned VK_NULL_HANDLE.");
       return 0;
     }
     imageViews[i] = imageView;
@@ -180,16 +184,19 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
 
   if (!atlrInitDepthImage(&swapchain->depthImage, extent.width, extent.height, device))
   {
-    ATLR_LOG_ERROR("atlrInitDepthImage returned 0.");
+    ATLR_ERROR_MSG("atlrInitDepthImage returned 0.");
     return 0;
   }
 
-  const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-  const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(&swapchain->depthImage);
-  if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &depthAttachment, device))
+  if (initRenderPass)
   {
-    ATLR_LOG_ERROR("atlrInitRenderPass returned 0.");
-    return 0;
+    const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(&swapchain->depthImage);
+    if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &depthAttachment, device))
+    {
+      ATLR_ERROR_MSG("atlrInitRenderPass returned 0.");
+      return 0;
+    }
   }
 
   VkFramebuffer* framebuffers = malloc(imageCount * sizeof(VkFramebuffer));
@@ -214,30 +221,32 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrDe
     };
     if (vkCreateFramebuffer(device->logical, &framebufferInfo, device->instance->allocator, framebuffers + i) != VK_SUCCESS)
     {
-      ATLR_LOG_ERROR("vkCreateFramebuffer did not return VK_SUCCESS.");
+      ATLR_ERROR_MSG("vkCreateFramebuffer did not return VK_SUCCESS.");
       return 0;
     }
   }
   swapchain->framebuffers = framebuffers;
 
-  atlrLog(LOG_INFO, "Done initializing Antler swapchain.");
+
+  atlrLog(ATLR_LOG_INFO, "Done initializing Antler swapchain.");
   return 1;
 }
 
-void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
+void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8 deinitRenderPass)
 { 
   const AtlrDevice* device = swapchain->device;
   if (device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
-    ATLR_LOG_ERROR("Atler is not in host GLFW mode.");
+    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
     return;
   }
-  atlrLog(LOG_INFO, "Deinitializing Antler swapchain in host GLFW mode ...");
+  atlrLog(ATLR_LOG_INFO, "Deinitializing Antler swapchain in host GLFW mode ...");
 
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
     vkDestroyFramebuffer(device->logical, swapchain->framebuffers[i], device->instance->allocator);
 
-  atlrDeinitRenderPass(&swapchain->renderPass);
+  if (deinitRenderPass)
+    atlrDeinitRenderPass(&swapchain->renderPass);
 
   atlrDeinitImage(&swapchain->depthImage, device);
   
@@ -246,5 +255,78 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
   free(swapchain->imageViews);
   free(swapchain->images);
   vkDestroySwapchainKHR(device->logical, swapchain->swapchain, device->instance->allocator);
-  atlrLog(LOG_INFO, "Done deinitializing Antler swapchain.");
+  atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler swapchain.");
 }
+
+AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
+{
+  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
+  {
+    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
+    return 0;
+  }
+  
+  int width = 0;
+  int height = 0;
+  GLFWwindow* window = swapchain->device->instance->data;
+  glfwGetFramebufferSize(window, &width, &height);
+  while (!width || !height)
+  {
+    glfwGetFramebufferSize(window, &width, &height);
+    glfwWaitEvents();
+  }
+  
+  vkDeviceWaitIdle(swapchain->device->logical);
+  
+  atlrDeinitSwapchainHostGLFW(swapchain, 0);
+  if (!atlrInitSwapchainHostGLFW(swapchain, 0, swapchain->device))
+  {
+    ATLR_ERROR_MSG("atlrInitSwapchainHostGLFW returned 0.");
+    return 0;
+  }
+
+  return 1;
+}
+
+VkResult atlrNextSwapchainImage(const AtlrSwapchain* restrict swapchain, const VkSemaphore imageAvailableSemaphore, AtlrU32* imageIndex)
+{
+  return vkAcquireNextImageKHR(swapchain->device->logical, swapchain->swapchain, UINT64_MAX,
+			       imageAvailableSemaphore, VK_NULL_HANDLE, imageIndex);
+}
+
+VkResult atlrSwapchainSubmit(const AtlrSwapchain* restrict swapchain, const VkCommandBuffer commandBuffer,
+			     const VkSemaphore imageAvailableSemaphore, const VkSemaphore renderFinishedSemaphore, const VkFence fence)
+{
+  const VkPipelineStageFlags submitWaitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  const VkSubmitInfo submitInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext = NULL,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &imageAvailableSemaphore,
+    .pWaitDstStageMask = &submitWaitStage,
+    .commandBufferCount = 1,
+    .pCommandBuffers = &commandBuffer,
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores = &renderFinishedSemaphore
+  };
+  
+  return vkQueueSubmit(swapchain->device->graphicsQueue, 1, &submitInfo, fence);
+}
+
+VkResult atlrSwapchainPresent(const AtlrSwapchain* restrict swapchain, const VkSemaphore renderFinishedSemaphore, const AtlrU32* restrict imageIndex)
+{
+  const VkPresentInfoKHR presentInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .pNext = NULL,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &renderFinishedSemaphore,
+    .swapchainCount = 1,
+    .pSwapchains = &swapchain->swapchain,
+    .pImageIndices = imageIndex,
+    .pResults = NULL
+  };
+  
+  return vkQueuePresentKHR(swapchain->device->presentQueue, &presentInfo);
+}				    

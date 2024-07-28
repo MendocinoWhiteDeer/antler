@@ -75,7 +75,7 @@ VkImageView atlrInitImageView(const VkImage image,
   VkImageView imageView;
   if(vkCreateImageView(device->logical, &imageViewInfo, device->instance->allocator, &imageView) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateImageView did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateImageView did not return VK_SUCCESS.");
     return VK_NULL_HANDLE;
   }
 
@@ -117,7 +117,7 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
   };
   if (vkCreateImage(device->logical, &imageInfo, device->instance->allocator, &image->image) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateImage did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateImage did not return VK_SUCCESS.");
     return 0;
   }
 
@@ -131,7 +131,7 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
   AtlrU32 memoryTypeIndex;
   if (!atlrGetVulkanMemoryTypeIndex(&memoryTypeIndex, device->physical, memoryRequirements.memoryTypeBits, properties))
   {
-    ATLR_LOG_ERROR("atlrGetVulkanMemoryTypeIndex returned 0.");
+    ATLR_ERROR_MSG("atlrGetVulkanMemoryTypeIndex returned 0.");
     return 0;
   }
   const VkMemoryAllocateInfo memoryAllocateInfo =
@@ -143,20 +143,20 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
   };
   if (vkAllocateMemory(device->logical, &memoryAllocateInfo, device->instance->allocator, &image->memory) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkAllocateMemory did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkAllocateMemory did not return VK_SUCCESS.");
     return 0;
   }
 
   if (vkBindImageMemory(device->logical, image->image, image->memory, 0) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkBindImageMemory did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkBindImageMemory did not return VK_SUCCESS.");
     return 0;
   }
 
   VkImageView imageView = atlrInitImageView(image->image, viewType, format, aspectFlags, layerCount, device);
   if (imageView == VK_NULL_HANDLE)
   {
-    ATLR_LOG_ERROR("atlrInitImageView returned VK_NULL_HANDLE.");
+    ATLR_ERROR_MSG("atlrInitImageView returned VK_NULL_HANDLE.");
     return 0;
   }
   image->imageView = imageView;
@@ -187,14 +187,14 @@ AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const 
   const VkFormat format = getSupportedImageFormat(device->physical, sizeof(depthFormatChoices) / sizeof(VkFormat), depthFormatChoices, tiling, features);
   if (format == VK_FORMAT_UNDEFINED)
   {
-    ATLR_LOG_ERROR("getSupportedImageFormat returned VK_FORMAT_UNDEFINED.");
+    ATLR_ERROR_MSG("getSupportedImageFormat returned VK_FORMAT_UNDEFINED.");
     return 0;
   }
 
   if (!atlrInitImage(image, width, height, 1, format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		     VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, device))
   {
-    ATLR_LOG_ERROR("atlrInitImage returned 0.");
+    ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
 
@@ -205,7 +205,7 @@ void atlrDeinitDepthImage(const AtlrImage* restrict image,
 			  const AtlrDevice* restrict device)
 {
   if (!atlrIsValidDepthImage(image))
-    ATLR_LOG_ERROR("atlrIsValidDepthImage returned 0.");
+    ATLR_ERROR_MSG("atlrIsValidDepthImage returned 0.");
   atlrDeinitImage(image, device);
 }
 
@@ -213,9 +213,9 @@ AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageL
 				 const AtlrSingleRecordCommandContext* restrict commandContext, const AtlrDevice* restrict device)
 {
   VkCommandBuffer commandBuffer;
-  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext, device))
+  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
   {
-    ATLR_LOG_ERROR("atlrBeginSingleRecordCommands returned 0.");
+    ATLR_ERROR_MSG("atlrBeginSingleRecordCommands returned 0.");
     return 0;
   }
   
@@ -255,15 +255,15 @@ AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageL
   }
   else
   {
-    ATLR_LOG_ERROR("Invalid image layout transition.");
+    ATLR_ERROR_MSG("Invalid image layout transition.");
     return 0;
   }
 
   vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, NULL, 0, NULL, 1, &barrier);
 
-  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext, device))
+  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext))
   {
-    ATLR_LOG_ERROR("atlrEndSingleRecordCommands returned 0.");
+    ATLR_ERROR_MSG("atlrEndSingleRecordCommands returned 0.");
     return 0;
   }
 

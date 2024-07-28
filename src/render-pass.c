@@ -48,7 +48,7 @@ VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restr
 {
   VkFormat format = VK_FORMAT_UNDEFINED;
   if (!atlrIsValidDepthImage(image))
-    ATLR_LOG_ERROR("atlrIsValidDepthImage returned 0.");
+    ATLR_ERROR_MSG("atlrIsValidDepthImage returned 0.");
   else
     format = image->format;
 
@@ -133,7 +133,7 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
   };
   if (vkCreateRenderPass(device->logical, &renderPassInfo, device->instance->allocator, &renderPass->renderPass) != VK_SUCCESS)
   {
-    ATLR_LOG_ERROR("vkCreateRenderPass did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("vkCreateRenderPass did not return VK_SUCCESS.");
     free(references);
     free(attachments);
     return 0;
