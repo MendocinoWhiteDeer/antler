@@ -52,10 +52,10 @@ typedef struct AtlrInstance
 
 typedef struct AtlrQueueFamilyIndices
 {
-  AtlrU8 isGraphics;
+  AtlrU8 isGraphicsCompute;
   AtlrU8 isPresent;
-  AtlrU32 graphics_index;
-  AtlrU32 present_index;
+  AtlrU32 graphicsComputeIndex;
+  AtlrU32 presentIndex;
   
 } AtlrQueueFamilyIndices;
 
@@ -86,6 +86,7 @@ typedef enum
   // queue criteria
   ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_SUPPORT,
   ATLR_DEVICE_CRITERION_QUEUE_FAMILY_PRESENT_SUPPORT,
+  ATLR_DEVICE_CRITERION_QUEUE_FAMILY_COMPUTE_SUPPORT,
 
   // swapchain criterion
   ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT,
@@ -119,7 +120,7 @@ typedef struct _AtlrDevice
   AtlrU8 hasSwapchainSupport;
   AtlrSwapchainSupportDetails swapchainSupportDetails;
   VkDevice logical;
-  VkQueue graphicsQueue;
+  VkQueue graphicsComputeQueue;
   VkQueue presentQueue;
   
 } AtlrDevice;
@@ -226,7 +227,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict, const AtlrInstance* restrict, co
 void atlrDeinitDeviceHost(AtlrDevice* restrict);
 
 // commands.c
-AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags,
+AtlrU8 atlrInitGraphicsComputeCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags,
 				   const AtlrDevice* restrict);
 void atlrDeinitCommandPool(const VkCommandPool,
 			   const AtlrDevice* restrict);
@@ -251,19 +252,29 @@ VkCommandBuffer atlrGetFrameCommandContextCommandBufferHostGLFW(const AtlrFrameC
 // buffer.c
 AtlrU8 atlrInitBuffer(AtlrBuffer* restrict, const AtlrU64 size, const VkBufferUsageFlags, const VkMemoryPropertyFlags,
 		      const AtlrDevice*);
+AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
+		      const AtlrDevice*);
+AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
+		      const AtlrDevice*);
 void atlrDeinitBuffer(AtlrBuffer* restrict,
 		      const AtlrDevice*);
 AtlrU8 atlrMapBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags,
 		     const AtlrDevice*);
 void atlrUnmapBuffer(const AtlrBuffer* restrict,
 		     const AtlrDevice*);
-AtlrU8 atlrLoadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data,
+AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data,
+		      const AtlrDevice* restrict);
+AtlrU8 atlrReadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data,
 		      const AtlrDevice* restrict);
 AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
-		      const AtlrDevice* restrict, const AtlrSingleRecordCommandContext*);
+		      const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrCopyBufferToImage(const AtlrBuffer*, const AtlrImage* restrict,
 			     const VkOffset2D*, const VkExtent2D*,
-			     const AtlrSingleRecordCommandContext*, const AtlrDevice*);
+			     const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrStageBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const void* restrict data,
+		       const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
+			  const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 
 // image.c
 VkImageView atlrInitImageView(const VkImage,

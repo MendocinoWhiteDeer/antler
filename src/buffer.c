@@ -72,6 +72,22 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   return 1;
 }
 
+AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size,
+		      const AtlrDevice* device)
+{
+  const VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  const VkMemoryPropertyFlags stagingMemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  return atlrInitBuffer(buffer, size, stagingUsage, stagingMemoryProperties, device);
+}
+
+AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size,
+		      const AtlrDevice* device)
+{
+  const VkBufferUsageFlags readbackUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+  const VkMemoryPropertyFlags readbackMemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  return atlrInitBuffer(buffer, size, readbackUsage, readbackMemoryProperties, device);
+}
+
 void atlrDeinitBuffer(AtlrBuffer* restrict buffer, const AtlrDevice* device)
 {
   vkFreeMemory(device->logical, buffer->memory, device->instance->allocator);
@@ -96,7 +112,7 @@ void atlrUnmapBuffer(const AtlrBuffer* restrict buffer,
   vkUnmapMemory(device->logical, buffer->memory);
 }
 
-AtlrU8 atlrLoadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, const void* restrict data,
+AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, const void* restrict data,
 		      const AtlrDevice* restrict device)
 {
   if (!atlrMapBuffer(buffer, offset, size, flags, device))
@@ -110,8 +126,22 @@ AtlrU8 atlrLoadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const A
   return 1;
 }
 
+AtlrU8 atlrReadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data,
+		      const AtlrDevice* restrict device)
+{
+  if (!atlrMapBuffer(buffer, offset, size, flags, device))
+  {
+    ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
+    return 0;
+  }
+  memcpy(data, buffer->data, size);
+  atlrUnmapBuffer(buffer, device);
+
+  return 1;
+}
+
 AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
-		      const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* commandContext)
+		      const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -139,7 +169,7 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
 
 AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict image,
 			     const VkOffset2D* offset, const VkExtent2D* extent,
-			     const AtlrSingleRecordCommandContext* commandContext, const AtlrDevice* device)
+			     const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -182,4 +212,58 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict
   }
 
   return 1;
+}
+
+AtlrU8 atlrStageBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const void* restrict data,
+		        const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+{
+    AtlrBuffer stagingBuffer;
+    if (!atlrInitStagingBuffer(&stagingBuffer, size, device))
+    {
+      ATLR_ERROR_MSG("atlrInitStagingBuffer returned 0.");
+      return 0;
+    }
+    
+    if (!atlrWriteBuffer(&stagingBuffer, 0, size, 0, data, device))
+    {
+      ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+      return 0;
+    }
+
+    if (!atlrCopyBuffer(buffer, &stagingBuffer, offset, 0, size, device, commandContext))
+    {
+      ATLR_ERROR_MSG("atlrCopyBuffer returned 0.");
+      return 0;
+    }
+
+    atlrDeinitBuffer(&stagingBuffer, device);
+
+    return 1;
+}
+
+AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
+			   const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+{
+    AtlrBuffer readbackingBuffer;
+    if (!atlrInitReadbackingBuffer(&readbackingBuffer, size, device))
+    {
+      ATLR_ERROR_MSG("atlrInitReadbackBuffer returned 0.");
+      return 0;
+    }
+
+    if (!atlrCopyBuffer(&readbackingBuffer, buffer, 0, offset, size, device, commandContext))
+    {
+      ATLR_ERROR_MSG("atlrCopyBuffer returned 0.");
+      return 0;
+    }
+
+    if (!atlrReadBuffer(&readbackingBuffer, 0, size, 0, data, device))
+    {
+      ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+      return 0;
+    }
+
+    atlrDeinitBuffer(&readbackingBuffer, device);
+
+    return 1;
 }

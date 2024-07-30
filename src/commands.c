@@ -26,7 +26,7 @@ static void windowResizeCallback(GLFWwindow* window, int width, int height)
   commandContext->isResize = 1;
 }
 
-AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags,
+AtlrU8 atlrInitGraphicsComputeCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags,
 				   const AtlrDevice* restrict device)
 {
   const VkCommandPoolCreateInfo poolInfo =
@@ -34,7 +34,7 @@ AtlrU8 atlrInitGraphicsCommandPool(VkCommandPool* restrict commandPool, const Vk
     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
     .pNext = NULL,
     .flags = flags,
-    .queueFamilyIndex = device->queueFamilyIndices.graphics_index
+    .queueFamilyIndex = device->queueFamilyIndices.graphicsComputeIndex
   };
   if (vkCreateCommandPool(device->logical, &poolInfo, device->instance->allocator, commandPool) != VK_SUCCESS)
   {
@@ -105,7 +105,7 @@ AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restri
 {
   commandContext->device = device;
   
-  if (!atlrInitGraphicsCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, device))
+  if (!atlrInitGraphicsComputeCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, device))
   {
     ATLR_ERROR_MSG("atlrInitGraphicsCommandPool returned 0.");
     return 0;
@@ -172,7 +172,7 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer commandBuffer, const At
     .signalSemaphoreCount = 0,
     .pSignalSemaphores = NULL
   };
-  if (vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, fence) != VK_SUCCESS)
+  if (vkQueueSubmit(device->graphicsComputeQueue, 1, &submitInfo, fence) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkQueueSubmit did not return VK_SUCCESS.");
     return 0;
@@ -227,7 +227,7 @@ AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict com
   glfwSetWindowUserPointer(window, commandContext);
   glfwSetFramebufferSizeCallback(window, windowResizeCallback);
 
-  if(!atlrInitGraphicsCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, device))
+  if(!atlrInitGraphicsComputeCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, device))
   {
     ATLR_ERROR_MSG("atlrInitGraphicsCommandPool returned 0.");
     return 0;

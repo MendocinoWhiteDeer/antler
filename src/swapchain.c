@@ -81,7 +81,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   } 
   VkPhysicalDeviceProperties properties;
   vkGetPhysicalDeviceProperties(device->physical, &properties);
-  if (!device->queueFamilyIndices.isGraphics || !device->queueFamilyIndices.isPresent)
+  if (!device->queueFamilyIndices.isGraphicsCompute || !device->queueFamilyIndices.isPresent)
   {
     ATLR_ERROR_MSG("The AtlrDevice with handle \"%s\" lacks queue family support.", properties.deviceName);
     return 0;
@@ -130,10 +130,10 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   const AtlrQueueFamilyIndices* indices = &device->queueFamilyIndices; 
   AtlrU32 indicesArr[2] =
   {
-    indices->graphics_index,
-    indices->present_index
+    indices->graphicsComputeIndex,
+    indices->presentIndex
   };
-  if (indices->graphics_index == indices->present_index)
+  if (indices->graphicsComputeIndex == indices->presentIndex)
   {
     swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchainInfo.queueFamilyIndexCount = 0;
@@ -311,7 +311,7 @@ VkResult atlrSwapchainSubmit(const AtlrSwapchain* restrict swapchain, const VkCo
     .pSignalSemaphores = &renderFinishedSemaphore
   };
   
-  return vkQueueSubmit(swapchain->device->graphicsQueue, 1, &submitInfo, fence);
+  return vkQueueSubmit(swapchain->device->graphicsComputeQueue, 1, &submitInfo, fence);
 }
 
 VkResult atlrSwapchainPresent(const AtlrSwapchain* restrict swapchain, const VkSemaphore renderFinishedSemaphore, const AtlrU32* restrict imageIndex)

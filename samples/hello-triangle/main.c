@@ -31,9 +31,9 @@ static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSwapchain swapchain;
 static AtlrFrameCommandContext commandContext;
-static Pipeline trianglePipeline;
+static Pipeline pipeline;
 
-static AtlrU8 initPipeline(Pipeline* restrict pipeline)
+static AtlrU8 initPipeline()
 {
   VkShaderModule modules[2] =
   {
@@ -68,7 +68,7 @@ static AtlrU8 initPipeline(Pipeline* restrict pipeline)
 
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
     atlrInitPipelineLayoutInfo(0, NULL);
-  if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline->layout) != VK_SUCCESS)
+  if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
     return 0;
@@ -90,13 +90,13 @@ static AtlrU8 initPipeline(Pipeline* restrict pipeline)
     .pDepthStencilState = &depthStencilInfo,
     .pColorBlendState = &colorBlendInfo,
     .pDynamicState = &dynamicInfo,
-    .layout = pipeline->layout,
+    .layout = pipeline.layout,
     .renderPass = swapchain.renderPass.renderPass,
     .subpass = 0,
     .basePipelineHandle = VK_NULL_HANDLE,
     .basePipelineIndex = -1
   };
-  if (vkCreateGraphicsPipelines(device.logical, VK_NULL_HANDLE, 1, &pipelineInfo, instance.allocator, &pipeline->pipeline) != VK_SUCCESS)
+  if (vkCreateGraphicsPipelines(device.logical, VK_NULL_HANDLE, 1, &pipelineInfo, instance.allocator, &pipeline.pipeline) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreateGraphicsPipelines did not return VK_SUCCESS.");
     return 0;
@@ -108,10 +108,10 @@ static AtlrU8 initPipeline(Pipeline* restrict pipeline)
   return 1;
 }
 
-static void deinitPipeline(Pipeline* restrict pipeline)
+static void deinitPipeline()
 {
-  vkDestroyPipelineLayout(device.logical, pipeline->layout, instance.allocator);
-  vkDestroyPipeline(device.logical, pipeline->pipeline, instance.allocator);
+  vkDestroyPipelineLayout(device.logical, pipeline.layout, instance.allocator);
+  vkDestroyPipeline(device.logical, pipeline.pipeline, instance.allocator);
 }
   
 static AtlrU8 initHelloTriangle()
@@ -160,7 +160,7 @@ static AtlrU8 initHelloTriangle()
     return 0;
   }
 
-  if (!initPipeline(&trianglePipeline))
+  if (!initPipeline())
   {
     ATLR_ERROR_MSG("initPipeline returned 0.");
     return 0;
@@ -175,7 +175,7 @@ static void deinitHelloTriangle()
 
   vkDeviceWaitIdle(device.logical);
   
-  deinitPipeline(&trianglePipeline);
+  deinitPipeline();
   atlrDeinitFrameCommandContextHostGLFW(&commandContext);
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);
@@ -203,7 +203,7 @@ int main()
     }
 
     const VkCommandBuffer commandBuffer = atlrGetFrameCommandContextCommandBufferHostGLFW(&commandContext);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline.pipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
     if (!atlrEndFrameCommandsHostGLFW(&commandContext))

@@ -52,6 +52,20 @@ set(SAMPLES_DIR "${PROJECT_SOURCE_DIR}/samples")
 set(SAMPLES_BIN_DIR "${CMAKE_BINARY_DIR}/samples")
 file(MAKE_DIRECTORY "${SAMPLES_BIN_DIR}")
 
+# add-vectors sample
+set(ADD_VECTORS_SAMPLE_DIR "${SAMPLES_DIR}/add-vectors")
+set(ADD_VECTORS_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/add-vectors")
+file(MAKE_DIRECTORY "${ADD_VECTORS_SAMPLE_BIN_DIR}")
+add_executable(add-vectors-sample "${ADD_VECTORS_SAMPLE_DIR}/main.c")
+set_target_properties(add-vectors-sample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${ADD_VECTORS_SAMPLE_BIN_DIR}")
+target_link_libraries(add-vectors-sample PRIVATE antler)
+compile_shader(
+  "${ADD_VECTORS_SAMPLE_DIR}/add.comp"
+  "${ADD_VECTORS_SAMPLE_BIN_DIR}/add-comp.spv")
+add_custom_target(add-vectors-shaders ALL DEPENDS
+  "${ADD_VECTORS_SAMPLE_BIN_DIR}/add-comp.spv")
+
 # hello-triangle sample
 set(HELLO_TRIANGLE_SAMPLE_DIR "${SAMPLES_DIR}/hello-triangle")
 set(HELLO_TRIANGLE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/hello-triangle")

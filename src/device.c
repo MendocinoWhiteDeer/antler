@@ -34,11 +34,13 @@ static const char* deviceCriterionNames[ATLR_DEVICE_CRITERION_TOT] =
 
   "QUEUE FAMILY GRAPHICS SUPPORT",
   "QUEUE FAMILY PRESENT SUPPORT",
+  "QUEUE FAMILY COMPUTE SUPPORT",
 
   "SWAPCHAIN SUPPORT"
 };
 
-// find queue families supporting graphics and present; prioritize any family with both
+// if graphics is supported Vulkan demands at least one family supporting both graphics and compute 
+// find queue families supporting graphics/compute and present; prioritize any family with both
 static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, const AtlrInstance* restrict instance, const VkPhysicalDevice physical)
 {
   AtlrU32 count = 0;
@@ -48,28 +50,29 @@ static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, con
 
   for (AtlrU8 i = 0; i < count; i++)
   {
-    VkBool32 graphicsSupport = properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
+    const VkQueueFlags queueFlags = properties[i].queueFlags;
+    const VkBool32 graphicsComputeSupport = (queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFlags & VK_QUEUE_COMPUTE_BIT);
     VkBool32 presentSupport = 0;
     if (instance->surface != VK_NULL_HANDLE)
       vkGetPhysicalDeviceSurfaceSupportKHR(physical, i, instance->surface, &presentSupport);
 
-    if (graphicsSupport && presentSupport)
+    if (graphicsComputeSupport && presentSupport)
     {
-      indices->isGraphics = 1;
+      indices->isGraphicsCompute = 1;
       indices->isPresent = 1;
-      indices->graphics_index = i;
-      indices->present_index = i;
+      indices->graphicsComputeIndex = i;
+      indices->presentIndex = i;
       break;
     }
-    else if (!indices->isGraphics && graphicsSupport)
+    else if (!indices->isGraphicsCompute && graphicsComputeSupport)
     {
-      indices->isGraphics = 1;
-      indices->graphics_index = i;
+      indices->isGraphicsCompute = 1;
+      indices->graphicsComputeIndex = i;
     }
     else if (!indices->isPresent && presentSupport)
     {
       indices->isPresent = 1;
-      indices->present_index = i;
+      indices->presentIndex = i;
     }
   }
 
@@ -291,10 +294,13 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
 	  break;
 
         case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_SUPPORT:
-	  criterionValues[j] = queueFamilyIndices.isGraphics;
+	  criterionValues[j] = queueFamilyIndices.isGraphicsCompute;
 	  break;
         case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_PRESENT_SUPPORT:
 	  criterionValues[j] = queueFamilyIndices.isPresent;
+	  break;
+        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_COMPUTE_SUPPORT:
+	  criterionValues[j] = queueFamilyIndices.isGraphicsCompute;
 	  break;
 
         case ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT:
@@ -416,15 +422,15 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
   AtlrU32 uniqueQueueFamilyIndices[2];
   const AtlrQueueFamilyIndices* queueFamilyIndices = &device->queueFamilyIndices; 
   AtlrU8 uniqueQueueFamilyIndicesCount = 0;
-  if (queueFamilyIndices->isGraphics)
+  if (queueFamilyIndices->isGraphicsCompute)
   {
-    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->graphics_index;
+    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->graphicsComputeIndex;
     uniqueQueueFamilyIndicesCount++;
   }
   if (queueFamilyIndices->isPresent &&
-      (!queueFamilyIndices->isGraphics || (queueFamilyIndices->graphics_index != queueFamilyIndices->present_index)))
+      (!queueFamilyIndices->isGraphicsCompute || (queueFamilyIndices->graphicsComputeIndex != queueFamilyIndices->presentIndex)))
   {
-    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->present_index;
+    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->presentIndex;
     uniqueQueueFamilyIndicesCount++;
   }
   VkDeviceQueueCreateInfo queueInfos[2];
@@ -465,12 +471,12 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     return 0;
   }
 
-  if (queueFamilyIndices->isGraphics)
-    vkGetDeviceQueue(device->logical, queueFamilyIndices->graphics_index, 0, &device->graphicsQueue);
+  if (queueFamilyIndices->isGraphicsCompute)
+    vkGetDeviceQueue(device->logical, queueFamilyIndices->graphicsComputeIndex, 0, &device->graphicsComputeQueue);
   else
-    device->graphicsQueue = VK_NULL_HANDLE;
+    device->graphicsComputeQueue = VK_NULL_HANDLE;
   if (queueFamilyIndices->isPresent)
-    vkGetDeviceQueue(device->logical, queueFamilyIndices->present_index, 0, &device->presentQueue);
+    vkGetDeviceQueue(device->logical, queueFamilyIndices->presentIndex, 0, &device->presentQueue);
   else
     device->presentQueue = VK_NULL_HANDLE;
 
