@@ -44,11 +44,11 @@ GLFW: https://github.com/glfw/glfw
 Vulkan
 
 ** Samples
-*** Adding Vectors
+*** add-vectors
 
-This sample uses a compute shader to add two random value vectors of a fixed size.
+After providing a seed, this sample uses a compute shader to add two random vectors of a fixed size.
 
-*** Hello Triangle
+*** hello-triangle
 
 A basic program to display a colored triangle.
 There are no vertex buffers; the vertex data is hardcoded into the vertex shader.

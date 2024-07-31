@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "../../src/antler.h"
+#include <stdio.h>
 #include <time.h>
 
 typedef struct Pipeline
@@ -39,7 +40,7 @@ static Pipeline pipeline;
 
 #define VECTOR_DIM 7
 
-static AtlrU8 initStorageBuffers(const AtlrF32* vec1, const AtlrF32* vec2)
+static AtlrU8 initStorageBuffers()
 {
   const AtlrU64 size = sizeof(AtlrF32) * VECTOR_DIM;
   VkBufferUsageFlags storageUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -57,34 +58,6 @@ static AtlrU8 initStorageBuffers(const AtlrF32* vec1, const AtlrF32* vec2)
     {
       ATLR_ERROR_MSG("atlrInitBuffer returned 0.");
       return 0;
-    }
-
-    switch (i)
-    {
-      case 0:
-	if (!atlrStageBuffer(storageBuffer, 0, size, vec1, &device, &commandContext))
-	{
-	  ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
-	  return 0;
-	}
-	break;
- 
-      case 1:
-	if (!atlrStageBuffer(storageBuffer, 0, size, vec2, &device, &commandContext))
-	{
-	  ATLR_ERROR_MSG("atlrStageBuffer returned 0.");
-	  return 0;
-	}
-	break;
-
-      case 3:
-	const AtlrF32 zeroed[VECTOR_DIM] = {};
-	if (!atlrStageBuffer(storageBuffer, 0, size, zeroed, &device, &commandContext))
-	{
-	  ATLR_ERROR_MSG("atlrStageBuffer returned 0.");
-	  return 0;
-	}
-	break;
     }
   }
 
@@ -268,19 +241,7 @@ static AtlrU8 initAddVectors()
     return 0;
   }
 
-  AtlrF32 vec1[VECTOR_DIM];
-  AtlrF32 vec2[VECTOR_DIM];
-  srand(time(NULL));
-  for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
-  {
-    vec1[i] = (AtlrF32)rand() / (AtlrF32)RAND_MAX;
-    vec2[i] = (AtlrF32)rand() / (AtlrF32)RAND_MAX;
-  }
-  for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
-    atlrLog(ATLR_LOG_INFO, "v1[%d] = %f", i, vec1[i]);
-  for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
-    atlrLog(ATLR_LOG_INFO, "v2[%d] = %f", i, vec2[i]);
-  if (!initStorageBuffers(vec1, vec2))
+  if (!initStorageBuffers())
   {
     ATLR_ERROR_MSG("initStorageBuffers returned 0.");
     return 0;
@@ -315,7 +276,6 @@ static void deinitAddVectors()
   atlrDeinitInstanceHostHeadless(&instance);
 }
 
-
 int main()
 {
   if (!initAddVectors())
@@ -325,31 +285,65 @@ int main()
   }
 
   AtlrF32 result[VECTOR_DIM];
-  
-  VkCommandBuffer commandBuffer;
-  if (!atlrBeginSingleRecordCommands(&commandBuffer, &commandContext))
-  {
-    ATLR_FATAL_MSG("atlrBeginSingleRecordCommands returned 0.");
-    return -1;
-  }
+  AtlrF32 inputVecs[2][VECTOR_DIM];
+  const AtlrU64 size = sizeof(AtlrF32) * VECTOR_DIM;
 
-  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
-  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 0, 1, &descriptorSet, 0, NULL);
-  vkCmdDispatch(commandBuffer, VECTOR_DIM, 1, 1);
-  
-  if (!atlrEndSingleRecordCommands(commandBuffer, &commandContext))
-  {
-    ATLR_FATAL_MSG("atlrEndSingleRecordCommands returned 0.");
-    return -1;
-  }
+  unsigned int seed;
+  char choice;
 
-  if (!atlrReadbackBuffer(storageBuffers + 2, 0, sizeof(AtlrF32) * VECTOR_DIM, result, &device, &commandContext))
+  do
   {
-    ATLR_FATAL_MSG("atlrReadbackBuffer returned 0.");
-    return -1;
-  }
-  for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
-    atlrLog(ATLR_LOG_INFO, "result[%d] = %f", i, result[i]);
+    printf("Enter a seed value: ");
+    scanf("%u", &seed);
+
+    atlrLog(ATLR_LOG_INFO, "Adding two random-value vectors of dimension %d: C = A + B ...",  VECTOR_DIM);
+    
+    srand(seed);
+    for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
+    {
+      inputVecs[0][i] = (AtlrF32)rand() / (AtlrF32)RAND_MAX;
+      inputVecs[1][i] = (AtlrF32)rand() / (AtlrF32)RAND_MAX;
+    }
+
+    for (AtlrU8 i = 0; i < 2; i++)
+    {
+      if (!atlrStageBuffer(storageBuffers + i, 0, size, inputVecs[i], &device, &commandContext))
+      {
+	ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+	return 0;
+      }
+    }
+  
+    VkCommandBuffer commandBuffer;
+    if (!atlrBeginSingleRecordCommands(&commandBuffer, &commandContext))
+    {
+      ATLR_FATAL_MSG("atlrBeginSingleRecordCommands returned 0.");
+      return -1;
+    }
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 0, 1, &descriptorSet, 0, NULL);
+    vkCmdDispatch(commandBuffer, VECTOR_DIM, 1, 1);
+  
+    if (!atlrEndSingleRecordCommands(commandBuffer, &commandContext))
+    {
+      ATLR_FATAL_MSG("atlrEndSingleRecordCommands returned 0.");
+      return -1;
+    }
+
+    if (!atlrReadbackBuffer(storageBuffers + 2, 0, sizeof(AtlrF32) * VECTOR_DIM, result, &device, &commandContext))
+    {
+      ATLR_FATAL_MSG("atlrReadbackBuffer returned 0.");
+      return -1;
+    }
+    
+    for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
+      atlrLog(ATLR_LOG_INFO, "A[%d] = %f; B{%d] = %f, C[%d] = %f", i, inputVecs[0][i], i, inputVecs[1][i], i, result[i]);
+
+    printf("Do you want to enter a new seed? (y/n): ");
+    scanf(" %c", &choice);
+
+  } while (choice == 'y' || choice == 'Y');
 
   deinitAddVectors();
 
