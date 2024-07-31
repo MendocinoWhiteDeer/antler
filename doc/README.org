@@ -48,6 +48,17 @@ Vulkan
 
 After providing a seed, this sample uses a compute shader to add two random vectors of a fixed size.
 
+*** conway-game-of-life
+
+The user provides grid dimensions and a seed for the initial random active and dead states of cells in a grid.
+Then the grid evolves according to the rules of John Conway's Game of Life. At each time step,
+
+1. Any active cell with one or fewer active cell neighbors deactivates.
+2. Any active cell with four or more active cell neighbors deactivates.
+3. Any dead cell with three active cell neighbors activates.
+
+If the cell is active it is rendered as white.
+
 *** hello-triangle
 
 A basic program to display a colored triangle.

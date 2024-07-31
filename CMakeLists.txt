@@ -66,6 +66,24 @@ compile_shader(
 add_custom_target(add-vectors-shaders ALL DEPENDS
   "${ADD_VECTORS_SAMPLE_BIN_DIR}/add-comp.spv")
 
+# conway-game-of-life sample
+set(CONWAY_LIFE_SAMPLE_DIR "${SAMPLES_DIR}/conway-game-of-life")
+set(CONWAY_LIFE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/conway-game-of-life")
+file(MAKE_DIRECTORY "${CONWAY_LIFE_SAMPLE_BIN_DIR}")
+add_executable(game-of-life-sample "${CONWAY_LIFE_SAMPLE_DIR}/main.c")
+set_target_properties(game-of-life-sample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CONWAY_LIFE_SAMPLE_BIN_DIR}")
+target_link_libraries(game-of-life-sample PRIVATE antler)
+compile_shader(
+  "${CONWAY_LIFE_SAMPLE_DIR}/quad.vert"
+  "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-vert.spv")
+compile_shader(
+  "${CONWAY_LIFE_SAMPLE_DIR}/quad.frag"
+  "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-frag.spv")
+add_custom_target(game-of-life-shaders ALL DEPENDS
+  "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-vert.spv"
+  "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-frag.spv")
+
 # hello-quad sample
 set(HELLO_QUAD_SAMPLE_DIR "${SAMPLES_DIR}/hello-quad")
 set(HELLO_QUAD_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/hello-quad")
