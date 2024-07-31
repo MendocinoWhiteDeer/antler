@@ -43,7 +43,7 @@ static Pipeline pipeline;
 static AtlrU8 initStorageBuffers()
 {
   const AtlrU64 size = sizeof(AtlrF32) * VECTOR_DIM;
-  VkBufferUsageFlags storageUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+  VkBufferUsageFlags storageUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
   const VkMemoryPropertyFlags storageMemoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   
   for (AtlrU8 i = 0; i < 3; i++)

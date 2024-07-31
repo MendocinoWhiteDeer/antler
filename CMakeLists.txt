@@ -66,6 +66,24 @@ compile_shader(
 add_custom_target(add-vectors-shaders ALL DEPENDS
   "${ADD_VECTORS_SAMPLE_BIN_DIR}/add-comp.spv")
 
+# hello-quad sample
+set(HELLO_QUAD_SAMPLE_DIR "${SAMPLES_DIR}/hello-quad")
+set(HELLO_QUAD_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/hello-quad")
+file(MAKE_DIRECTORY "${HELLO_QUAD_SAMPLE_BIN_DIR}")
+add_executable(hello-quad-sample "${HELLO_QUAD_SAMPLE_DIR}/main.c")
+set_target_properties(hello-quad-sample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${HELLO_QUAD_SAMPLE_BIN_DIR}")
+target_link_libraries(hello-quad-sample PRIVATE antler)
+compile_shader(
+  "${HELLO_QUAD_SAMPLE_DIR}/quad.vert"
+  "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-vert.spv")
+compile_shader(
+  "${HELLO_QUAD_SAMPLE_DIR}/quad.frag"
+  "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-frag.spv")
+add_custom_target(hello-quad-shaders ALL DEPENDS
+  "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-vert.spv"
+  "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-frag.spv")
+
 # hello-triangle sample
 set(HELLO_TRIANGLE_SAMPLE_DIR "${SAMPLES_DIR}/hello-triangle")
 set(HELLO_TRIANGLE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/hello-triangle")

@@ -142,6 +142,14 @@ typedef struct _AtlrBuffer
   
 } AtlrBuffer;
 
+typedef struct _AtlrMesh
+{
+  AtlrBuffer vertexBuffer;
+  AtlrBuffer indexBuffer;
+  AtlrU32 indexCount;
+  
+} AtlrMesh;
+
 typedef struct _AtlrImage
 {
   VkImage image;
@@ -276,6 +284,12 @@ AtlrU8 atlrStageBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64
 		       const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
 			  const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrInitMesh(AtlrMesh* restrict, const AtlrU64 verticesSize, const void* restrict vertices, const AtlrU32 indexCount, const AtlrU16* restrict indices,
+		    const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+void atlrDeinitMesh(AtlrMesh* restrict mesh,
+		    const AtlrDevice* restrict);
+void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
+void atlrDrawMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 
 // image.c
 VkImageView atlrInitImageView(const VkImage,

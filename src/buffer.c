@@ -267,3 +267,48 @@ AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, con
 
     return 1;
 }
+
+AtlrU8 atlrInitMesh(AtlrMesh* restrict mesh, const AtlrU64 verticesSize, const void* restrict vertices, const AtlrU32 indexCount, const AtlrU16* restrict indices,
+		    const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+{
+  mesh->indexCount = indexCount;
+  const AtlrU64 indicesSize = indexCount * sizeof(AtlrU16);
+  
+  const VkBufferUsageFlags vertexUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+  const VkBufferUsageFlags indexUsage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+  const VkMemoryPropertyFlags memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+  if (!atlrInitBuffer(&mesh->vertexBuffer, verticesSize, vertexUsage, memoryProperty, device) ||
+      !atlrStageBuffer(&mesh->vertexBuffer, 0, verticesSize, vertices, device, commandContext))
+  {
+    ATLR_ERROR_MSG("Failed to init and stage vertex buffer.");
+    return 0;
+  }
+  if (!atlrInitBuffer(&mesh->indexBuffer, indicesSize, indexUsage, memoryProperty, device) ||
+      !atlrStageBuffer(&mesh->indexBuffer, 0, indicesSize, indices, device, commandContext))
+  {
+    ATLR_ERROR_MSG("Failed to init and stage index buffer.");
+    return 0;
+  }
+
+  return 1;
+}
+
+void atlrDeinitMesh(AtlrMesh* restrict mesh,
+		    const AtlrDevice* restrict device)
+{
+  atlrDeinitBuffer(&mesh->vertexBuffer, device);
+  atlrDeinitBuffer(&mesh->indexBuffer, device);
+}
+
+void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer commandBuffer)
+{
+  const VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh->vertexBuffer.buffer, offsets);
+  vkCmdBindIndexBuffer(commandBuffer, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+}
+
+void atlrDrawMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer commandBuffer)
+{
+  vkCmdDrawIndexed(commandBuffer, mesh->indexCount, 1, 0, 0, 0);
+}
