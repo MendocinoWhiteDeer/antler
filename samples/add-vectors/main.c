@@ -261,7 +261,8 @@ static AtlrU8 initAddVectors()
     return 0;
   }
 
-  if (!atlrInitSingleRecordCommandContext(&commandContext, &device))
+  const AtlrU32 computeQueueFamilyIndex = device.queueFamilyIndices.graphicsComputeIndex;
+  if (!atlrInitSingleRecordCommandContext(&commandContext, computeQueueFamilyIndex, &device))
   {
     ATLR_ERROR_MSG("atlrInitSingleRecordCommandContext returned 0.");
     return 0;

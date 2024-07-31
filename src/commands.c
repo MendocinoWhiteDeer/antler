@@ -26,7 +26,7 @@ static void windowResizeCallback(GLFWwindow* window, int width, int height)
   commandContext->isResize = 1;
 }
 
-AtlrU8 atlrInitGraphicsComputeCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags,
+AtlrU8 atlrInitCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags, const AtlrU32 queueFamilyIndex,
 				   const AtlrDevice* restrict device)
 {
   const VkCommandPoolCreateInfo poolInfo =
@@ -34,7 +34,7 @@ AtlrU8 atlrInitGraphicsComputeCommandPool(VkCommandPool* restrict commandPool, c
     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
     .pNext = NULL,
     .flags = flags,
-    .queueFamilyIndex = device->queueFamilyIndices.graphicsComputeIndex
+    .queueFamilyIndex = queueFamilyIndex
   };
   if (vkCreateCommandPool(device->logical, &poolInfo, device->instance->allocator, commandPool) != VK_SUCCESS)
   {
@@ -100,12 +100,13 @@ AtlrU8 atlrEndCommandRecording(const VkCommandBuffer commandBuffer)
   return 1;
 }
 
-AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict commandContext,
+AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict commandContext, const AtlrU32 queueFamilyIndex,
 					  const AtlrDevice* restrict device)
 {
   commandContext->device = device;
+  vkGetDeviceQueue(device->logical, queueFamilyIndex, 0, &commandContext->queue);
   
-  if (!atlrInitGraphicsComputeCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, device))
+  if (!atlrInitCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, queueFamilyIndex, device))
   {
     ATLR_ERROR_MSG("atlrInitGraphicsCommandPool returned 0.");
     return 0;
@@ -172,7 +173,7 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer commandBuffer, const At
     .signalSemaphoreCount = 0,
     .pSignalSemaphores = NULL
   };
-  if (vkQueueSubmit(device->graphicsComputeQueue, 1, &submitInfo, fence) != VK_SUCCESS)
+  if (vkQueueSubmit(commandContext->queue, 1, &submitInfo, fence) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkQueueSubmit did not return VK_SUCCESS.");
     return 0;
@@ -227,7 +228,7 @@ AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict com
   glfwSetWindowUserPointer(window, commandContext);
   glfwSetFramebufferSizeCallback(window, windowResizeCallback);
 
-  if(!atlrInitGraphicsComputeCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, device))
+  if(!atlrInitCommandPool(&commandContext->commandPool, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, device->queueFamilyIndices.graphicsComputeIndex, device))
   {
     ATLR_ERROR_MSG("atlrInitGraphicsCommandPool returned 0.");
     return 0;

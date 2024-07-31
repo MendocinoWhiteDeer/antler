@@ -39,7 +39,7 @@ typedef enum
   
 } AtlrMode;
 
-typedef struct AtlrInstance
+typedef struct _AtlrInstance
 {
   AtlrMode mode;
   VkInstance instance;
@@ -50,7 +50,7 @@ typedef struct AtlrInstance
   
 } AtlrInstance;
 
-typedef struct AtlrQueueFamilyIndices
+typedef struct _AtlrQueueFamilyIndices
 {
   AtlrU8 isGraphicsCompute;
   AtlrU8 isPresent;
@@ -59,7 +59,7 @@ typedef struct AtlrQueueFamilyIndices
   
 } AtlrQueueFamilyIndices;
 
-typedef struct AtlrSwapchainSupportDetails
+typedef struct _AtlrSwapchainSupportDetails
 {
   VkSurfaceCapabilitiesKHR capabilities;
   AtlrU32 formatCount;
@@ -128,6 +128,7 @@ typedef struct _AtlrDevice
 typedef struct _AtlrSingleRecordCommandContext
 {
   const AtlrDevice* device;
+  VkQueue queue;
   VkCommandPool commandPool;
   VkFence fence;
   
@@ -227,7 +228,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict, const AtlrInstance* restrict, co
 void atlrDeinitDeviceHost(AtlrDevice* restrict);
 
 // commands.c
-AtlrU8 atlrInitGraphicsComputeCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags,
+AtlrU8 atlrInitCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags, const AtlrU32 queueFamilyIndex,
 				   const AtlrDevice* restrict);
 void atlrDeinitCommandPool(const VkCommandPool,
 			   const AtlrDevice* restrict);
@@ -235,7 +236,7 @@ AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffer
 					 const AtlrDevice*);
 AtlrU8 atlrBeginCommandRecording(const VkCommandBuffer, const VkCommandBufferUsageFlags);
 AtlrU8 atlrEndCommandRecording(const VkCommandBuffer);
-AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict,
+AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrU32 queueFamilyIndex,
 					  const AtlrDevice* restrict);
 void atlrDeinitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict, const AtlrSingleRecordCommandContext* restrict);
