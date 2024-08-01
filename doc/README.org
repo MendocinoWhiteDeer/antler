@@ -55,9 +55,13 @@ Then the grid evolves according to the rules of John Conway's Game of Life. At e
 
 1. Any active cell with one or fewer active cell neighbors deactivates.
 2. Any active cell with four or more active cell neighbors deactivates.
-3. Any dead cell with three active cell neighbors activates.
+3. Any dead cell with three total active cell neighbors activates.
 
 If the cell is active it is rendered as white.
+
+*** hello-quad
+
+A basic quad. Unlke hello-triangle, it uses vertex and index buffers.
 
 *** hello-triangle
 
