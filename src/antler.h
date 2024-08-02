@@ -28,8 +28,6 @@ typedef int8_t   AtlrI8;
 typedef int16_t  AtlrI16;
 typedef int32_t  AtlrI32;
 typedef int64_t  AtlrI64;
-typedef float    AtlrF32;
-typedef double   AtlrF64;
 
 typedef enum
 {

@@ -41,7 +41,7 @@ static Pipeline pipeline;
 
 static AtlrU8 initStorageBuffers()
 {
-  const AtlrU64 size = sizeof(AtlrF32) * VECTOR_DIM;
+  const AtlrU64 size = sizeof(float) * VECTOR_DIM;
   VkBufferUsageFlags storageUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
   const VkMemoryPropertyFlags storageMemoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   
@@ -137,7 +137,7 @@ static AtlrU8 initDescriptor()
     {
       .buffer = storageBuffers[i].buffer,
       .offset = 0,
-      .range = sizeof(AtlrF32) * VECTOR_DIM
+      .range = sizeof(float) * VECTOR_DIM
     };
     memcpy(bufferInfos + i, &bufferInfo, sizeof(VkDescriptorBufferInfo));
     const VkWriteDescriptorSet descriptorWrite =
@@ -283,9 +283,9 @@ int main()
     return -1;
   }
 
-  AtlrF32 result[VECTOR_DIM];
-  AtlrF32 inputVecs[2][VECTOR_DIM];
-  const AtlrU64 size = sizeof(AtlrF32) * VECTOR_DIM;
+  float result[VECTOR_DIM];
+  float inputVecs[2][VECTOR_DIM];
+  const AtlrU64 size = sizeof(float) * VECTOR_DIM;
 
   unsigned int seed;
   char choice;
@@ -300,8 +300,8 @@ int main()
     srand(seed);
     for (AtlrU8 i = 0; i < VECTOR_DIM; i++)
     {
-      inputVecs[0][i] = (AtlrF32)rand() / (AtlrF32)RAND_MAX;
-      inputVecs[1][i] = (AtlrF32)rand() / (AtlrF32)RAND_MAX;
+      inputVecs[0][i] = (float)rand() / (float)RAND_MAX;
+      inputVecs[1][i] = (float)rand() / (float)RAND_MAX;
     }
 
     for (AtlrU8 i = 0; i < 2; i++)
@@ -330,7 +330,7 @@ int main()
       return -1;
     }
 
-    if (!atlrReadbackBuffer(storageBuffers + 2, 0, sizeof(AtlrF32) * VECTOR_DIM, result, &device, &commandContext))
+    if (!atlrReadbackBuffer(storageBuffers + 2, 0, sizeof(float) * VECTOR_DIM, result, &device, &commandContext))
     {
       ATLR_FATAL_MSG("atlrReadbackBuffer returned 0.");
       return -1;

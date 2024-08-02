@@ -434,7 +434,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     uniqueQueueFamilyIndicesCount++;
   }
   VkDeviceQueueCreateInfo queueInfos[2];
-  const AtlrF32 priority = 1.0f;
+  const float priority = 1.0f;
   for (AtlrU32 i = 0; i < uniqueQueueFamilyIndicesCount; i++)
     queueInfos[i] = (VkDeviceQueueCreateInfo)
     {

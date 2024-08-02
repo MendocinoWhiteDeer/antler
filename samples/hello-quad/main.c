@@ -19,11 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "../../src/antler.h"
+#include "../../src/transforms.h"
 
 typedef struct ColorVertex
 {
-  AtlrF32 pos[2];
-  AtlrF32 color[3];
+  AtlrVec2 pos;
+  AtlrVec3 color;
   
 } ColorVertex;
 
@@ -204,10 +205,10 @@ static AtlrU8 initHelloQuad()
   
   const ColorVertex quadVertices[4] =
   {
-    (ColorVertex){.pos = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-    (ColorVertex){.pos = { 0.5f, -0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-    (ColorVertex){.pos = { 0.5f,  0.5f}, .color = {0.0f, 0.0f, 1.0f}},
-    (ColorVertex){.pos = {-0.5f,  0.5f}, .color = {1.0f, 0.0f, 1.0f}}
+    (ColorVertex){.pos = {{-0.5f, -0.5f}}, .color = {{1.0f, 0.0f, 0.0f}}},
+    (ColorVertex){.pos = {{ 0.5f, -0.5f}}, .color = {{0.0f, 1.0f, 0.0f}}},
+    (ColorVertex){.pos = {{ 0.5f,  0.5f}}, .color = {{0.0f, 0.0f, 1.0f}}},
+    (ColorVertex){.pos = {{-0.5f,  0.5f}}, .color = {{1.0f, 0.0f, 1.0f}}}
   };
   const AtlrU16 indices[6] =
   {

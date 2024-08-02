@@ -19,19 +19,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "../../src/antler.h"
+#include "../../src/transforms.h"
 #include <stdio.h>
 #include <time.h>
 
 typedef struct Vertex
 {
-  AtlrF32 pos[2];
+  AtlrVec2 pos;
   
 } Vertex;
 
 typedef struct Transfom
 {
-  AtlrF32 translate[2];
-  AtlrF32 scale[2];
+  AtlrVec2 translate;
+  AtlrVec2 scale;
   
 } Transform;
 
@@ -216,10 +217,10 @@ static AtlrU8 initConwayLife()
   
   const Vertex quadVertices[4] =
   {
-    (Vertex){.pos = {0.1f, 0.1f}},
-    (Vertex){.pos = {0.9f, 0.1f}},
-    (Vertex){.pos = {0.9f, 0.9f}},
-    (Vertex){.pos = {0.1f, 0.9f}}
+    (Vertex){.pos = {{0.1f, 0.1f}}},
+    (Vertex){.pos = {{0.9f, 0.1f}}},
+    (Vertex){.pos = {{0.9f, 0.9f}}},
+    (Vertex){.pos = {{0.1f, 0.9f}}}
   };
   const AtlrU16 indices[6] =
   {
@@ -259,41 +260,30 @@ static void deinitConwayLife()
 }
 
 // update cells based on the rules of Conway's Game of Life
-static void updateCells(AtlrU8* restrict cells, const AtlrU8* restrict oldCells, const AtlrU32 rows, const AtlrU32 columns)
+static void updateCells(AtlrU8* restrict cells, const AtlrU8* restrict oldCells, const AtlrI32 rows, const AtlrI32 columns)
 {
-  for (AtlrU32 i = 0; i < columns; i++)
-    for (AtlrU32 j = 0; j < rows; j++)
+  for (AtlrI32 i = 0; i < columns; i++)
+    for (AtlrI32 j = 0; j < rows; j++)
+    {
+      AtlrU8 count = 0;
+      for (AtlrI32 k = i - 1; k <= i + 1; k++)
       {
-	AtlrU8 count = 0;
-	if (i > 0)
+	if (k < 0 || k >= columns) continue;
+	for (AtlrI32 l = j - 1; l <= j + 1; l++)
 	{
-	  if (j > 0)
-	    count += oldCells[(i - 1) * rows + (j - 1)];
-	  if (j < rows - 1)
-	    count += oldCells[(i - 1) * rows + (j + 1)];
-	  count += oldCells[(i - 1) * rows + j];
+	  if (l < 0 || l >= rows || (k == i && l == j)) continue;
+	  count += oldCells[k * rows + l];
 	}
-	if (i < columns - 1)
-	{
-	  if (j > 0)
-	    count += oldCells[(i + 1) * rows + (j - 1)];
-	  if (j < rows - 1)
-	    count += oldCells[(i + 1) * rows + (j + 1)];
-	  count += oldCells[(i + 1) * rows + j];
-	}
-	if (j > 0)
-	  count += oldCells[i * rows + (j - 1)];
-	if (j < rows - 1)
-	  count += oldCells[i * rows + (j + 1)];
-
-	if (oldCells[i * rows + j])
-	{
-	  if (count < 2 || count > 3)
-	    cells[i * rows + j] = 0;
-	}
-	else if (count == 3)
-	  cells[i * rows + j] = 1;
+      }  
+      
+      if (oldCells[i * rows + j])
+      {
+	if (count < 2 || count > 3)
+	  cells[i * rows + j] = 0;
       }
+      else if (count == 3)
+	cells[i * rows + j] = 1;
+    }
 }
 
 int main()
@@ -312,8 +302,8 @@ int main()
   srand(seed);
 
   Transform transform;
-  transform.scale[0] = 2.0f / columns;
-  transform.scale[1] = 2.0f / rows;
+  transform.scale.x = 2.0f / columns;
+  transform.scale.y = 2.0f / rows;
   
   AtlrU8* cells = malloc(rows * columns * sizeof(AtlrU8));
   AtlrU8* oldCells = malloc(rows * columns * sizeof(AtlrU8));
@@ -356,12 +346,12 @@ int main()
 
     for (AtlrU32 i = 0; i < columns; i++)
     {
-      transform.translate[0] = -1.0f + i * transform.scale[0];
+      transform.translate.x = -1.0f + i * transform.scale.x;
       for (AtlrU32 j = 0; j < rows; j++)
       {
 	if (!cells[i * rows + j]) continue;
 
-	transform.translate[1] = -1.0f + j * transform.scale[1];
+	transform.translate.y = -1.0f + j * transform.scale.y;
 	vkCmdPushConstants(commandBuffer, pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Transform), &transform);
 	atlrDrawMesh(&quadMesh, commandBuffer);
       }
