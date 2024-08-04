@@ -32,8 +32,8 @@ static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSingleRecordCommandContext commandContext;
 static AtlrBuffer storageBuffers[3];
-static VkDescriptorSetLayout descriptorSetLayout;
-static VkDescriptorPool descriptorPool;
+static AtlrDescriptorSetLayout descriptorSetLayout;
+static AtlrDescriptorPool descriptorPool;
 static VkDescriptorSet descriptorSet;
 static Pipeline pipeline;
 
@@ -66,66 +66,32 @@ static AtlrU8 initStorageBuffers()
 static void deinitStorageBuffers()
 {
   for (AtlrU8 i = 0; i < 3; i++)
-    atlrDeinitBuffer(storageBuffers + i, &device);
+    atlrDeinitBuffer(storageBuffers + i);
 }
 
 static AtlrU8 initDescriptor()
 {
+  const VkDescriptorType type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  
   VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[3];
   for (AtlrU8 i = 0; i < 3; i++)
-    descriptorSetLayoutBindings[i] = (VkDescriptorSetLayoutBinding)
-    {
-      .binding = i,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      .descriptorCount = 1,
-      .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-      .pImmutableSamplers = NULL
-    };
-  const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo =
+    descriptorSetLayoutBindings[i] = atlrInitDescriptorSetLayoutBinding(i, type, VK_SHADER_STAGE_COMPUTE_BIT);
+  if (!atlrInitDescriptorSetLayout(&descriptorSetLayout, 3, descriptorSetLayoutBindings, &device))
   {
-    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .bindingCount = 3,
-    .pBindings = descriptorSetLayoutBindings
-  };
-  if(vkCreateDescriptorSetLayout(device.logical, &descriptorSetLayoutInfo, instance.allocator, &descriptorSetLayout) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreateDescriptorSetLayout did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
     return 0;
   }
 
-  const VkDescriptorPoolSize poolSize =
+  const VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, 3);
+  if (!atlrInitDescriptorPool(&descriptorPool, 1, 1, &poolSize, &device))
   {
-    .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-    .descriptorCount = 3
-  };
-  const VkDescriptorPoolCreateInfo descriptorPoolInfo =
-  {
-    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .maxSets = 1,
-    .poolSizeCount = 1,
-    .pPoolSizes = &poolSize
-  };
-  if (vkCreateDescriptorPool(device.logical, &descriptorPoolInfo, instance.allocator, &descriptorPool) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreateDescriptorPool did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
     return 0;
   }
 
-  const VkDescriptorSetAllocateInfo descriptorSetAllocInfo =
+  if (!atlrAllocDescriptorSets(&descriptorPool, 1, &descriptorSetLayout.layout, &descriptorSet))
   {
-    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-    .pNext = NULL,
-    .descriptorPool = descriptorPool,
-    .descriptorSetCount = 1,
-    .pSetLayouts = &descriptorSetLayout
-  };
-  if (vkAllocateDescriptorSets(device.logical, &descriptorSetAllocInfo, &descriptorSet) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkAllocateDescriptorSets did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("atlrAllocDescriptorSets returned 0.");
     return 0;
   }
 
@@ -133,27 +99,8 @@ static AtlrU8 initDescriptor()
   VkWriteDescriptorSet descriptorWrites[3];
   for (AtlrU8 i = 0; i < 3; i++)
   {
-    const VkDescriptorBufferInfo bufferInfo =
-    {
-      .buffer = storageBuffers[i].buffer,
-      .offset = 0,
-      .range = sizeof(float) * VECTOR_DIM
-    };
-    memcpy(bufferInfos + i, &bufferInfo, sizeof(VkDescriptorBufferInfo));
-    const VkWriteDescriptorSet descriptorWrite =
-    {
-      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .pNext = NULL,
-      .dstSet = descriptorSet,
-      .dstBinding = i,
-      .dstArrayElement = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      .pImageInfo = NULL,
-      .pBufferInfo = bufferInfos + i,
-      .pTexelBufferView = NULL
-    };
-    memcpy(descriptorWrites + i, &descriptorWrite, sizeof(VkWriteDescriptorSet));
+    bufferInfos[i] = atlrInitDescriptorBufferInfo(storageBuffers + i, sizeof(float) * VECTOR_DIM);
+    descriptorWrites[i] = atlrWriteBufferDescriptorSet(descriptorSet, i, type, bufferInfos + i);
   }
   vkUpdateDescriptorSets(device.logical, 3, descriptorWrites, 0, NULL);
 
@@ -162,9 +109,9 @@ static AtlrU8 initDescriptor()
 
 static void deinitDescriptor()
 {
-  vkDestroyDescriptorPool(device.logical, descriptorPool, instance.allocator);
+  atlrDeinitDescriptorPool(&descriptorPool);
   descriptorSet = VK_NULL_HANDLE;
-  vkDestroyDescriptorSetLayout(device.logical, descriptorSetLayout, instance.allocator);
+  atlrDeinitDescriptorSetLayout(&descriptorSetLayout);
 }
 
 static AtlrU8 initPipeline()
@@ -173,7 +120,7 @@ static AtlrU8 initPipeline()
   VkPipelineShaderStageCreateInfo stageInfo =  atlrInitPipelineComputeShaderStageInfo(module);
 
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-    atlrInitPipelineLayoutInfo(1, &descriptorSetLayout);
+    atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout);
   if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
@@ -306,7 +253,7 @@ int main()
 
     for (AtlrU8 i = 0; i < 2; i++)
     {
-      if (!atlrStageBuffer(storageBuffers + i, 0, size, inputVecs[i], &device, &commandContext))
+      if (!atlrStageBuffer(storageBuffers + i, 0, size, inputVecs[i], &commandContext))
       {
 	ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
 	return 0;
@@ -330,7 +277,7 @@ int main()
       return -1;
     }
 
-    if (!atlrReadbackBuffer(storageBuffers + 2, 0, sizeof(float) * VECTOR_DIM, result, &device, &commandContext))
+    if (!atlrReadbackBuffer(storageBuffers + 2, 0, sizeof(float) * VECTOR_DIM, result, &commandContext))
     {
       ATLR_FATAL_MSG("atlrReadbackBuffer returned 0.");
       return -1;

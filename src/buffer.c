@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
 		      const AtlrDevice* device)
 {
+  buffer->device = device;
+  
   const VkBufferCreateInfo bufferInfo =
   {
     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -88,16 +90,16 @@ AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size
   return atlrInitBuffer(buffer, size, readbackUsage, readbackMemoryProperties, device);
 }
 
-void atlrDeinitBuffer(AtlrBuffer* restrict buffer, const AtlrDevice* device)
+void atlrDeinitBuffer(AtlrBuffer* restrict buffer)
 {
+  const AtlrDevice* device = buffer->device;
   vkFreeMemory(device->logical, buffer->memory, device->instance->allocator);
   vkDestroyBuffer(device->logical, buffer->buffer, device->instance->allocator);
 }
 
-AtlrU8 atlrMapBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags,
-		     const AtlrDevice* device)
+AtlrU8 atlrMapBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags)
 {
-  if (vkMapMemory(device->logical, buffer->memory, offset, size, flags, &buffer->data) != VK_SUCCESS)
+  if (vkMapMemory(buffer->device->logical, buffer->memory, offset, size, flags, &buffer->data) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkMapMemory did not return VK_SUCCESS.");
     return 0;
@@ -106,42 +108,39 @@ AtlrU8 atlrMapBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const At
   return 1;
 }
 
-void atlrUnmapBuffer(const AtlrBuffer* restrict buffer,
-		     const AtlrDevice* device)
+void atlrUnmapBuffer(const AtlrBuffer* restrict buffer)
 {
-  vkUnmapMemory(device->logical, buffer->memory);
+  vkUnmapMemory(buffer->device->logical, buffer->memory);
 }
 
-AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, const void* restrict data,
-		      const AtlrDevice* restrict device)
+AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, const void* restrict data)
 {
-  if (!atlrMapBuffer(buffer, offset, size, flags, device))
+  if (!atlrMapBuffer(buffer, offset, size, flags))
   {
     ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
     return 0;
   }
   memcpy(buffer->data, data, size);
-  atlrUnmapBuffer(buffer, device);
+  atlrUnmapBuffer(buffer);
 
   return 1;
 }
 
-AtlrU8 atlrReadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data,
-		      const AtlrDevice* restrict device)
+AtlrU8 atlrReadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data)
 {
-  if (!atlrMapBuffer(buffer, offset, size, flags, device))
+  if (!atlrMapBuffer(buffer, offset, size, flags))
   {
     ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
     return 0;
   }
   memcpy(data, buffer->data, size);
-  atlrUnmapBuffer(buffer, device);
+  atlrUnmapBuffer(buffer);
 
   return 1;
 }
 
 AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
-		      const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+		      const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -169,7 +168,7 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
 
 AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict image,
 			     const VkOffset2D* offset, const VkExtent2D* extent,
-			     const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+			     const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -215,57 +214,57 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict
 }
 
 AtlrU8 atlrStageBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const void* restrict data,
-		        const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+		       const AtlrSingleRecordCommandContext* restrict commandContext)
 {
-    AtlrBuffer stagingBuffer;
-    if (!atlrInitStagingBuffer(&stagingBuffer, size, device))
-    {
-      ATLR_ERROR_MSG("atlrInitStagingBuffer returned 0.");
-      return 0;
-    }
+  AtlrBuffer stagingBuffer;
+  if (!atlrInitStagingBuffer(&stagingBuffer, size, buffer->device))
+  {
+    ATLR_ERROR_MSG("atlrInitStagingBuffer returned 0.");
+    return 0;
+  }
     
-    if (!atlrWriteBuffer(&stagingBuffer, 0, size, 0, data, device))
-    {
-      ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
-      return 0;
-    }
+  if (!atlrWriteBuffer(&stagingBuffer, 0, size, 0, data))
+  {
+    ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+    return 0;
+  }
 
-    if (!atlrCopyBuffer(buffer, &stagingBuffer, offset, 0, size, device, commandContext))
-    {
-      ATLR_ERROR_MSG("atlrCopyBuffer returned 0.");
-      return 0;
-    }
+  if (!atlrCopyBuffer(buffer, &stagingBuffer, offset, 0, size, commandContext))
+  {
+    ATLR_ERROR_MSG("atlrCopyBuffer returned 0.");
+    return 0;
+  }
 
-    atlrDeinitBuffer(&stagingBuffer, device);
-
-    return 1;
+  atlrDeinitBuffer(&stagingBuffer);
+  
+  return 1;
 }
 
 AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
-			   const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+			  const AtlrSingleRecordCommandContext* restrict commandContext)
 {
-    AtlrBuffer readbackingBuffer;
-    if (!atlrInitReadbackingBuffer(&readbackingBuffer, size, device))
-    {
-      ATLR_ERROR_MSG("atlrInitReadbackBuffer returned 0.");
-      return 0;
-    }
+  AtlrBuffer readbackingBuffer;
+  if (!atlrInitReadbackingBuffer(&readbackingBuffer, size, buffer->device))
+  {
+    ATLR_ERROR_MSG("atlrInitReadbackBuffer returned 0.");
+    return 0;
+  }
+  
+  if (!atlrCopyBuffer(&readbackingBuffer, buffer, 0, offset, size, commandContext))
+  {
+    ATLR_ERROR_MSG("atlrCopyBuffer returned 0.");
+    return 0;
+  }
 
-    if (!atlrCopyBuffer(&readbackingBuffer, buffer, 0, offset, size, device, commandContext))
-    {
-      ATLR_ERROR_MSG("atlrCopyBuffer returned 0.");
-      return 0;
-    }
+  if (!atlrReadBuffer(&readbackingBuffer, 0, size, 0, data))
+  {
+    ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+    return 0;
+  }
 
-    if (!atlrReadBuffer(&readbackingBuffer, 0, size, 0, data, device))
-    {
-      ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
-      return 0;
-    }
-
-    atlrDeinitBuffer(&readbackingBuffer, device);
-
-    return 1;
+  atlrDeinitBuffer(&readbackingBuffer);
+  
+  return 1;
 }
 
 AtlrU8 atlrInitMesh(AtlrMesh* restrict mesh, const AtlrU64 verticesSize, const void* restrict vertices, const AtlrU32 indexCount, const AtlrU16* restrict indices,
@@ -279,13 +278,13 @@ AtlrU8 atlrInitMesh(AtlrMesh* restrict mesh, const AtlrU64 verticesSize, const v
   const VkMemoryPropertyFlags memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
   if (!atlrInitBuffer(&mesh->vertexBuffer, verticesSize, vertexUsage, memoryProperty, device) ||
-      !atlrStageBuffer(&mesh->vertexBuffer, 0, verticesSize, vertices, device, commandContext))
+      !atlrStageBuffer(&mesh->vertexBuffer, 0, verticesSize, vertices, commandContext))
   {
     ATLR_ERROR_MSG("Failed to init and stage vertex buffer.");
     return 0;
   }
   if (!atlrInitBuffer(&mesh->indexBuffer, indicesSize, indexUsage, memoryProperty, device) ||
-      !atlrStageBuffer(&mesh->indexBuffer, 0, indicesSize, indices, device, commandContext))
+      !atlrStageBuffer(&mesh->indexBuffer, 0, indicesSize, indices, commandContext))
   {
     ATLR_ERROR_MSG("Failed to init and stage index buffer.");
     return 0;
@@ -294,11 +293,10 @@ AtlrU8 atlrInitMesh(AtlrMesh* restrict mesh, const AtlrU64 verticesSize, const v
   return 1;
 }
 
-void atlrDeinitMesh(AtlrMesh* restrict mesh,
-		    const AtlrDevice* restrict device)
+void atlrDeinitMesh(AtlrMesh* restrict mesh)
 {
-  atlrDeinitBuffer(&mesh->vertexBuffer, device);
-  atlrDeinitBuffer(&mesh->indexBuffer, device);
+  atlrDeinitBuffer(&mesh->vertexBuffer);
+  atlrDeinitBuffer(&mesh->indexBuffer);
 }
 
 void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer commandBuffer)

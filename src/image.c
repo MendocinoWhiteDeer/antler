@@ -93,6 +93,8 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
 		     const VkMemoryPropertyFlags properties, const VkImageViewType viewType, const VkImageAspectFlags aspectFlags,
 		     const AtlrDevice* restrict device)
 {
+  image->device = device;
+  
   const VkImageCreateInfo imageInfo =
   {
     .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -164,8 +166,9 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
   return 1;
 }
 
-void atlrDeinitImage(const AtlrImage* restrict image, const AtlrDevice* restrict device)
+void atlrDeinitImage(const AtlrImage* restrict image)
 {
+  const AtlrDevice* device = image->device;
   atlrDeinitImageView(image->imageView, device);
   vkFreeMemory(device->logical, image->memory, device->instance->allocator);
   vkDestroyImage(device->logical, image->image, device->instance->allocator);
@@ -201,16 +204,15 @@ AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const 
   return 1;
 }
 
-void atlrDeinitDepthImage(const AtlrImage* restrict image,
-			  const AtlrDevice* restrict device)
+void atlrDeinitDepthImage(const AtlrImage* restrict image)
 {
   if (!atlrIsValidDepthImage(image))
     ATLR_ERROR_MSG("atlrIsValidDepthImage returned 0.");
-  atlrDeinitImage(image, device);
+  atlrDeinitImage(image);
 }
 
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout,
-				 const AtlrSingleRecordCommandContext* restrict commandContext, const AtlrDevice* restrict device)
+				 const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))

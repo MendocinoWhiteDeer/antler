@@ -240,7 +240,7 @@ static void deinitHelloQuad()
   vkDeviceWaitIdle(device.logical);
   
   deinitPipeline();
-  atlrDeinitMesh(&quadMesh, &device);
+  atlrDeinitMesh(&quadMesh);
   atlrDeinitFrameCommandContextHostGLFW(&commandContext);
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);

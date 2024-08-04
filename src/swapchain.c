@@ -248,7 +248,7 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   if (deinitRenderPass)
     atlrDeinitRenderPass(&swapchain->renderPass);
 
-  atlrDeinitImage(&swapchain->depthImage, device);
+  atlrDeinitImage(&swapchain->depthImage);
   
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
     atlrDeinitImageView(swapchain->imageViews[i], device);
@@ -260,7 +260,9 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
 
 AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
 {
-  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
+  const AtlrDevice* device = swapchain->device;
+  
+  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
     ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
     return 0;
@@ -268,7 +270,7 @@ AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
   
   int width = 0;
   int height = 0;
-  GLFWwindow* window = swapchain->device->instance->data;
+  GLFWwindow* window = device->instance->data;
   glfwGetFramebufferSize(window, &width, &height);
   while (!width || !height)
   {
@@ -276,10 +278,10 @@ AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
     glfwWaitEvents();
   }
   
-  vkDeviceWaitIdle(swapchain->device->logical);
+  vkDeviceWaitIdle(device->logical);
   
   atlrDeinitSwapchainHostGLFW(swapchain, 0);
-  if (!atlrInitSwapchainHostGLFW(swapchain, 0, swapchain->device))
+  if (!atlrInitSwapchainHostGLFW(swapchain, 0, device))
   {
     ATLR_ERROR_MSG("atlrInitSwapchainHostGLFW returned 0.");
     return 0;

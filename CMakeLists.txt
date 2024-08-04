@@ -24,6 +24,7 @@ add_library(antler
   "src/commands.c"
   "src/buffer.c"
   "src/image.c"
+  "src/descriptor.c"
   "src/pipeline.c"
   "src/render-pass.c"
   "src/swapchain.c")

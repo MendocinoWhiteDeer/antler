@@ -134,6 +134,7 @@ typedef struct _AtlrSingleRecordCommandContext
 
 typedef struct _AtlrBuffer
 {
+  const AtlrDevice* device;
   VkBuffer buffer;
   VkDeviceMemory memory;
   void* data;
@@ -150,6 +151,7 @@ typedef struct _AtlrMesh
 
 typedef struct _AtlrImage
 {
+  const AtlrDevice* device;
   VkImage image;
   VkDeviceMemory memory;
   VkImageView imageView;
@@ -160,14 +162,19 @@ typedef struct _AtlrImage
   
 } AtlrImage;
 
-typedef struct _AtlrFrame
+typedef struct _AtlrDescriptorSetLayout
 {
-  VkCommandBuffer commandBuffer;
-  VkSemaphore imageAvailableSemaphore;
-  VkSemaphore renderFinishedSemaphore;
-  VkFence inFlightFence;
+  const AtlrDevice* device;
+  VkDescriptorSetLayout layout;
   
-} AtlrFrame;
+} AtlrDescriptorSetLayout;
+
+typedef struct _AtlrDescriptorPool
+{
+  const AtlrDevice* device;
+  VkDescriptorPool pool;
+  
+} AtlrDescriptorPool;
 
 typedef struct _AtlrRenderPass
 {
@@ -194,6 +201,15 @@ typedef struct _AtlrSwapchain
   VkFramebuffer* framebuffers;
   
 } AtlrSwapchain;
+
+typedef struct _AtlrFrame
+{
+  VkCommandBuffer commandBuffer;
+  VkSemaphore imageAvailableSemaphore;
+  VkSemaphore renderFinishedSemaphore;
+  VkFence inFlightFence;
+  
+} AtlrFrame;
 
 typedef struct _AtlrFrameCommandContext
 {
@@ -263,29 +279,23 @@ AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
 		      const AtlrDevice*);
 AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
 		      const AtlrDevice*);
-void atlrDeinitBuffer(AtlrBuffer* restrict,
-		      const AtlrDevice*);
-AtlrU8 atlrMapBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags,
-		     const AtlrDevice*);
-void atlrUnmapBuffer(const AtlrBuffer* restrict,
-		     const AtlrDevice*);
-AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data,
-		      const AtlrDevice* restrict);
-AtlrU8 atlrReadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data,
-		      const AtlrDevice* restrict);
+void atlrDeinitBuffer(AtlrBuffer* restrict);
+AtlrU8 atlrMapBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags);
+void atlrUnmapBuffer(const AtlrBuffer* restrict);
+AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data);
+AtlrU8 atlrReadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data);
 AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
-		      const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+		      const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrCopyBufferToImage(const AtlrBuffer*, const AtlrImage* restrict,
 			     const VkOffset2D*, const VkExtent2D*,
-			     const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+			     const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrStageBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const void* restrict data,
-		       const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+		       const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
-			  const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
+			  const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrInitMesh(AtlrMesh* restrict, const AtlrU64 verticesSize, const void* restrict vertices, const AtlrU32 indexCount, const AtlrU16* restrict indices,
-		    const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
-void atlrDeinitMesh(AtlrMesh* restrict mesh,
-		    const AtlrDevice* restrict);
+		    const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict);
+void atlrDeinitMesh(AtlrMesh* restrict mesh);
 void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 void atlrDrawMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 
@@ -299,15 +309,28 @@ AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 hei
 		     const AtlrU32 layerCount, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
 		     const VkMemoryPropertyFlags, const VkImageViewType, const VkImageAspectFlags,
 		     const AtlrDevice* restrict);
-void atlrDeinitImage(const AtlrImage* restrict,
-		     const AtlrDevice* restrict);
+void atlrDeinitImage(const AtlrImage* restrict);
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
 AtlrU8 atlrInitDepthImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
 			  const AtlrDevice* restrict);
-void atlrDeinitDepthImage(const AtlrImage* restrict,
-			  const AtlrDevice* restrict);
+void atlrDeinitDepthImage(const AtlrImage* restrict);
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
-				 const AtlrSingleRecordCommandContext* restrict, const AtlrDevice* restrict);
+				 const AtlrSingleRecordCommandContext* restrict);
+
+// descriptor.c
+VkDescriptorSetLayoutBinding atlrInitDescriptorSetLayoutBinding(const AtlrU32 binding, const VkDescriptorType, const VkShaderStageFlags);
+AtlrU8 atlrInitDescriptorSetLayout(AtlrDescriptorSetLayout* restrict, const AtlrU32 bindingCount, const VkDescriptorSetLayoutBinding* restrict,
+				   const AtlrDevice* restrict);
+void atlrDeinitDescriptorSetLayout(const AtlrDescriptorSetLayout* restrict);
+VkDescriptorPoolSize atlrInitDescriptorPoolSize(const VkDescriptorType, const AtlrU32 descriptorCount);
+AtlrU8 atlrInitDescriptorPool(AtlrDescriptorPool* restrict, const AtlrU32 maxSets, const AtlrU32 poolSizeCount, const VkDescriptorPoolSize* restrict,
+			      const AtlrDevice* restrict);
+void atlrDeinitDescriptorPool(const AtlrDescriptorPool* restrict);
+AtlrU8 atlrAllocDescriptorSets(const AtlrDescriptorPool* restrict, const AtlrU32 setCount, const VkDescriptorSetLayout* restrict setLayouts, VkDescriptorSet* restrict sets);
+VkDescriptorBufferInfo atlrInitDescriptorBufferInfo(const AtlrBuffer* restrict, const AtlrU64 size);
+VkWriteDescriptorSet atlrWriteBufferDescriptorSet(const VkDescriptorSet, const AtlrU32 binding, const VkDescriptorType, const VkDescriptorBufferInfo* restrict);
+VkDescriptorImageInfo atlrInitDescriptorImageInfo(const AtlrImage* restrict, const VkSampler, const VkImageLayout);
+VkWriteDescriptorSet atlrWriteImageDescriptorSet(const VkDescriptorSet, const AtlrU32 binding, const VkDescriptorType, const VkDescriptorImageInfo* restrict);
 
 // pipeline.c
 VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice* restrict);
