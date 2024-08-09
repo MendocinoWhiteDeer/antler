@@ -18,6 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   
 */
 
+/*
+References:
+
+Games, M. (1970). The fantastic combinations of John Conway’s new solitaire game “life” by Martin Gardner. Scientific American, 223, 120-123.
+
+*/
+
 #include "../../src/antler.h"
 #include "../../src/transforms.h"
 #include <stdio.h>

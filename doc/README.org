@@ -24,15 +24,19 @@ Make sure the working directory is the same as the binary directory when running
 Otherwise, the sample program will have trouble finding the needed resources to run properly.
 The different sample programs are documented in this README file.
 
-** Relevant Learning Materials
+** Learning Resources
 
-https://vulkan-tutorial.com/
+https://docs.vulkan.org/guide/latest/vulkan_spec.html
 
-https://vkguide.dev
+Real‐Time Rendering, 4th Edition by Tomas Akenine-Möller, Eric Haines, Naty Hoffman, Angelo Pesce, Michał Iwanicki, and Sébastien Hillaire
 
 https://saschawillems.de
 
-https://docs.vulkan.org/guide/latest/vulkan_spec.html
+https://www.songho.ca
+
+https://vkguide.dev
+
+https://vulkan-tutorial.com/
 
 ** Dependencies
 *** Submodules
@@ -58,6 +62,10 @@ Then the grid evolves according to the rules of John Conway's Game of Life. At e
 3. Any dead cell with three total active cell neighbors activates.
 
 If the cell is active it is rendered as white.
+
+**** References
+
+Gardner, M. (1970). MATHEMATICAL GAMES. Scientific American, 223(4), 120–123. http://www.jstor.org/stable/24927642
 
 *** hello-quad
 
