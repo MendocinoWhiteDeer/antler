@@ -46,13 +46,6 @@ typedef struct WorldTransform
   
 } WorldTransform;
 
-typedef struct Pipeline
-{
-  VkPipelineLayout layout;
-  VkPipeline pipeline;
-  
-} Pipeline;
-
 // projection planes
 static const float fov = 45;
 static const float nearPlane = 0.1f;
@@ -69,7 +62,7 @@ static AtlrBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
 static AtlrDescriptorSetLayout descriptorSetLayout;
 static AtlrDescriptorPool descriptorPool;
 static VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
-static Pipeline pipeline;
+static AtlrPipeline pipeline;
 
 static AtlrU8 initUniformBuffers()
 { 
@@ -162,94 +155,35 @@ static AtlrU8 initPipeline()
 
   const VkVertexInputBindingDescription vertexInputBindingDescription =
   {
-    .binding = 0,
-    .stride = sizeof(Vertex),
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    .binding = 0, .stride = sizeof(Vertex), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
   };
   const VkVertexInputAttributeDescription vertexInputAttributeDescriptions[2] =
   {
-    (VkVertexInputAttributeDescription)
-    {
-      .location = 0,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = offsetof(Vertex, pos)
-    },
-    (VkVertexInputAttributeDescription)
-    {
-      .location = 1,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = offsetof(Vertex, normal)
-    }
+    (VkVertexInputAttributeDescription){.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, pos)},
+    (VkVertexInputAttributeDescription){.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, normal)}
   };
-  const VkPipelineVertexInputStateCreateInfo vertexInputInfo =
-  {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .vertexBindingDescriptionCount = 1,
-    .pVertexBindingDescriptions = &vertexInputBindingDescription,
-    .vertexAttributeDescriptionCount = 2,
-    .pVertexAttributeDescriptions = vertexInputAttributeDescriptions
-  };
+  const VkPipelineVertexInputStateCreateInfo vertexInputInfo = atlrInitVertexInputStateInfo(1, &vertexInputBindingDescription, 2, vertexInputAttributeDescriptions);
 
-  const VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo =
-    atlrInitPipelineInputAssemblyStateInfo();
-  const VkPipelineViewportStateCreateInfo viewportInfo =
-    atlrInitPipelineViewportStateInfo();
-  const VkPipelineRasterizationStateCreateInfo rasterizationInfo =
-    atlrInitPipelineRasterizationStateInfo();
-  const VkPipelineMultisampleStateCreateInfo multisampleInfo =
-    atlrInitPipelineMultisampleStateInfo();
-  const VkPipelineDepthStencilStateCreateInfo depthStencilInfo =
-    atlrInitPipelineDepthStencilStateInfo();
-  const VkPipelineColorBlendAttachmentState colorBlendAttachment =
-    atlrInitPipelineColorBlendAttachmentState();
-  const VkPipelineColorBlendStateCreateInfo colorBlendInfo =
-    atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
-  const VkPipelineDynamicStateCreateInfo dynamicInfo =
-    atlrInitPipelineDynamicStateInfo();
+  const VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = atlrInitPipelineInputAssemblyStateInfo();
+  const VkPipelineViewportStateCreateInfo viewportInfo           = atlrInitPipelineViewportStateInfo();
+  const VkPipelineRasterizationStateCreateInfo rasterizationInfo = atlrInitPipelineRasterizationStateInfo();
+  const VkPipelineMultisampleStateCreateInfo multisampleInfo     = atlrInitPipelineMultisampleStateInfo();
+  const VkPipelineDepthStencilStateCreateInfo depthStencilInfo   = atlrInitPipelineDepthStencilStateInfo();
+  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentState();
+  const VkPipelineColorBlendStateCreateInfo colorBlendInfo       = atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
+  const VkPipelineDynamicStateCreateInfo dynamicInfo             = atlrInitPipelineDynamicStateInfo();
 
   const VkPushConstantRange pushConstantRange =
   {
-    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    .offset = 0,
-    .size = sizeof(WorldTransform)
+    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(WorldTransform)
   };
-  const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-    atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 1, &pushConstantRange);
-  if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
-    return 0;
-  }
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 1, &pushConstantRange);
 
-  const VkGraphicsPipelineCreateInfo pipelineInfo =
+  if(!atlrInitGraphicsPipeline(&pipeline,
+			       2, stageInfos, &vertexInputInfo, &inputAssemblyInfo, NULL, &viewportInfo, &rasterizationInfo, &multisampleInfo, &depthStencilInfo, &colorBlendInfo, &dynamicInfo, &pipelineLayoutInfo,
+			       &device, &swapchain.renderPass))
   {
-    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .stageCount = 2,
-    .pStages = stageInfos,
-    .pVertexInputState = &vertexInputInfo,
-    .pInputAssemblyState = &inputAssemblyInfo,
-    .pTessellationState = NULL,
-    .pViewportState = &viewportInfo,
-    .pRasterizationState = &rasterizationInfo,
-    .pMultisampleState = &multisampleInfo,
-    .pDepthStencilState = &depthStencilInfo,
-    .pColorBlendState = &colorBlendInfo,
-    .pDynamicState = &dynamicInfo,
-    .layout = pipeline.layout,
-    .renderPass = swapchain.renderPass.renderPass,
-    .subpass = 0,
-    .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex = -1
-  };
-  if (vkCreateGraphicsPipelines(device.logical, VK_NULL_HANDLE, 1, &pipelineInfo, instance.allocator, &pipeline.pipeline) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreateGraphicsPipelines did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("atlrInitGraphicsPipeline returned 0.");
     return 0;
   }
 
@@ -261,8 +195,7 @@ static AtlrU8 initPipeline()
 
 static void deinitPipeline()
 {
-  vkDestroyPipelineLayout(device.logical, pipeline.layout, instance.allocator);
-  vkDestroyPipeline(device.logical, pipeline.pipeline, instance.allocator);
+  atlrDeinitPipeline(&pipeline);
 }
   
 static AtlrU8 initRotatingCube()
@@ -458,9 +391,11 @@ int main()
 
   // parameters for the simulation
   float t = 0.0f;
+  const float a = 1.0f;
+  const float b = 0.8f;
   const float period = 10.0; // period of the cube's oscillatory change in side-length
   const AtlrVec3 axis = {{1.0f, 1.0f, 1.0f}};
-  const float v0 = (2 * M_PI) / 8.0f; // initial rotational speed
+  const float v0 = M_PI; // initial rotational speed
   float alpha, oldAngle, angle, oldS, s;
 
   clock_t startTime = clock();
@@ -477,9 +412,9 @@ int main()
     {
       // Relative simulation time t is measured relative to the closest multiple of the period smaller than the real simulation time.
       // The relative angle, called alpha, is updated with this in mind.
-      AtlrU32 m = 0;
-      for (t += frameTime; t >= period; t -= period) m++;
-      if (m) alpha += m * period * v0;
+      AtlrU32 n= 0;
+      for (t += frameTime; t >= period; t -= period) n++;
+      if (n) alpha += n * period * v0;
       if (alpha < 0)
 	while (alpha < 0) alpha += 2 * M_PI;
       else if (alpha >= 2 * M_PI)
@@ -487,11 +422,11 @@ int main()
 
       // Update the side-length
       oldS = s;
-      s = 1.0f / sqrtf(1.0f + 0.5f * sinf((2 * M_PI * t) / period)); 
+      s = 1.0f / sqrtf(a + b * sinf((2 * M_PI * t) / period)); 
       
       // Update the angle.
       oldAngle = angle;
-      angle = alpha + (t - (period / (4 * M_PI)) * cosf((2 * M_PI) / period)) * v0;
+      angle = alpha + (t - (period * b) / (2 * a * M_PI) * cosf((2 * M_PI * t) / period)) * v0;
 
       // shift the angle of the previous and current update frames in a way that prevents jumps when interpolating.
       if (angle < 0)

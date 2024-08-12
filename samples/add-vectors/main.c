@@ -21,13 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../../src/antler.h"
 #include <stdio.h>
 
-typedef struct Pipeline
-{
-  VkPipelineLayout layout;
-  VkPipeline pipeline;
-  
-} Pipeline;
-
 static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSingleRecordCommandContext commandContext;
@@ -35,7 +28,7 @@ static AtlrBuffer storageBuffers[3];
 static AtlrDescriptorSetLayout descriptorSetLayout;
 static AtlrDescriptorPool descriptorPool;
 static VkDescriptorSet descriptorSet;
-static Pipeline pipeline;
+static AtlrPipeline pipeline;
 
 #define VECTOR_DIM 7
 
@@ -119,27 +112,11 @@ static AtlrU8 initPipeline()
   VkShaderModule module = atlrInitShaderModule("add-comp.spv", &device);
   VkPipelineShaderStageCreateInfo stageInfo =  atlrInitPipelineComputeShaderStageInfo(module);
 
-  const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-    atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 0, NULL);
-  if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
-    return 0;
-  }
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 0, NULL);
 
-  const VkComputePipelineCreateInfo pipelineInfo =
+  if (!atlrInitComputePipeline(&pipeline, &stageInfo, &pipelineLayoutInfo, &device))
   {
-    .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .stage = stageInfo,
-    .layout = pipeline.layout,
-    .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex = -1
-  };
-  if (vkCreateComputePipelines(device.logical, VK_NULL_HANDLE, 1, &pipelineInfo, instance.allocator, &pipeline.pipeline) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreateComputePipelines returned 0.");
+    ATLR_ERROR_MSG("atlrInitComputePipeline returned 0.");
     return 0;
   }
   
@@ -150,8 +127,7 @@ static AtlrU8 initPipeline()
 
 static void deinitPipeline()
 {
-  vkDestroyPipelineLayout(device.logical, pipeline.layout, instance.allocator);
-  vkDestroyPipeline(device.logical, pipeline.pipeline, instance.allocator);
+  atlrDeinitPipeline(&pipeline);
 }
   
 static AtlrU8 initAddVectors()

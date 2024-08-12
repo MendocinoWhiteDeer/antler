@@ -109,6 +109,21 @@ VkPipelineShaderStageCreateInfo atlrInitPipelineComputeShaderStageInfo(const VkS
   };
 }
 
+VkPipelineVertexInputStateCreateInfo atlrInitVertexInputStateInfo(const AtlrU32 bindingCount, const VkVertexInputBindingDescription* restrict bindings,
+								  const AtlrU32 attributeCount, const VkVertexInputAttributeDescription* restrict attributes)
+{
+  return (VkPipelineVertexInputStateCreateInfo)
+  {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    .pNext = NULL,
+    .flags = 0,
+    .vertexBindingDescriptionCount = bindingCount,
+    .pVertexBindingDescriptions = bindings,
+    .vertexAttributeDescriptionCount = attributeCount,
+    .pVertexAttributeDescriptions = attributes
+  };
+}
+
 VkPipelineInputAssemblyStateCreateInfo atlrInitPipelineInputAssemblyStateInfo()
 {
   return (VkPipelineInputAssemblyStateCreateInfo)
@@ -245,4 +260,96 @@ VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(const AtlrU32 setLayoutCou
     .pushConstantRangeCount = pushConstantRangeCount,
     .pPushConstantRanges = pushConstantRanges
   };
+}
+
+AtlrU8 atlrInitGraphicsPipeline(AtlrPipeline* restrict pipeline,
+				const AtlrU32 stageCount, const VkPipelineShaderStageCreateInfo* restrict stageInfos,
+				const VkPipelineVertexInputStateCreateInfo* restrict vertexInputInfo,
+				const VkPipelineInputAssemblyStateCreateInfo* restrict inputAssemblyInfo,
+				const VkPipelineTessellationStateCreateInfo* restrict tessellationInfo,
+				const VkPipelineViewportStateCreateInfo* restrict viewportInfo,
+				const VkPipelineRasterizationStateCreateInfo* restrict rasterizationInfo,
+				const VkPipelineMultisampleStateCreateInfo* restrict multisampleInfo,
+				const VkPipelineDepthStencilStateCreateInfo* restrict depthStencilInfo,
+				const VkPipelineColorBlendStateCreateInfo* restrict colorBlendInfo,
+				const VkPipelineDynamicStateCreateInfo* restrict dynamicInfo,
+				const VkPipelineLayoutCreateInfo* restrict pipelineLayoutInfo,
+				const AtlrDevice* restrict device, const AtlrRenderPass* restrict renderPass)
+{
+  pipeline->device = device;
+  
+  if (vkCreatePipelineLayout(device->logical, pipelineLayoutInfo, device->instance->allocator, &pipeline->layout) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
+    return 0;
+  }
+
+  const VkGraphicsPipelineCreateInfo pipelineInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+    .pNext = NULL,
+    .flags = 0,
+    .stageCount = stageCount,
+    .pStages = stageInfos,
+    .pVertexInputState = vertexInputInfo,
+    .pInputAssemblyState = inputAssemblyInfo,
+    .pTessellationState = tessellationInfo,
+    .pViewportState = viewportInfo,
+    .pRasterizationState = rasterizationInfo,
+    .pMultisampleState = multisampleInfo,
+    .pDepthStencilState = depthStencilInfo,
+    .pColorBlendState = colorBlendInfo,
+    .pDynamicState = dynamicInfo,
+    .layout = pipeline->layout,
+    .renderPass = renderPass->renderPass,
+    .subpass = 0,
+    .basePipelineHandle = VK_NULL_HANDLE,
+    .basePipelineIndex = -1
+  };
+  if (vkCreateGraphicsPipelines(device->logical, VK_NULL_HANDLE, 1, &pipelineInfo, device->instance->allocator, &pipeline->pipeline) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkCreateGraphicsPipelines did not return VK_SUCCESS.");
+    return 0;
+  }
+
+  return 1;
+}
+
+AtlrU8 atlrInitComputePipeline(AtlrPipeline* restrict pipeline,
+			       const VkPipelineShaderStageCreateInfo* restrict stageInfo,
+			       const VkPipelineLayoutCreateInfo* restrict pipelineLayoutInfo,
+			       const AtlrDevice* restrict device)
+{
+  pipeline->device = device;
+  
+  if (vkCreatePipelineLayout(device->logical, pipelineLayoutInfo, device->instance->allocator, &pipeline->layout) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
+    return 0;
+  }
+
+  const VkComputePipelineCreateInfo pipelineInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+    .pNext = NULL,
+    .flags = 0,
+    .stage = *stageInfo,
+    .layout = pipeline->layout,
+    .basePipelineHandle = VK_NULL_HANDLE,
+    .basePipelineIndex = -1
+  };
+  if (vkCreateComputePipelines(device->logical, VK_NULL_HANDLE, 1, &pipelineInfo, device->instance->allocator, &pipeline->pipeline) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkCreateComputePipelines did not return VK_SUCCESS.");
+    return 0;
+  }
+
+  return 1;
+}
+
+void atlrDeinitPipeline(const AtlrPipeline* restrict pipeline)
+{
+  const AtlrDevice* device = pipeline->device;
+  vkDestroyPipelineLayout(device->logical, pipeline->layout, device->instance->allocator);
+  vkDestroyPipeline(device->logical, pipeline->pipeline, device->instance->allocator);
 }

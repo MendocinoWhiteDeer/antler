@@ -176,6 +176,14 @@ typedef struct _AtlrDescriptorPool
   
 } AtlrDescriptorPool;
 
+typedef struct _AtlrPipeline
+{
+  const AtlrDevice* device;
+  VkPipelineLayout layout;
+  VkPipeline pipeline;
+  
+} AtlrPipeline;
+
 typedef struct _AtlrRenderPass
 {
   const AtlrDevice* device;
@@ -343,6 +351,7 @@ void atlrDeinitShaderModule(const VkShaderModule module, const AtlrDevice* restr
 VkPipelineShaderStageCreateInfo atlrInitPipelineVertexShaderStageInfo(const VkShaderModule);
 VkPipelineShaderStageCreateInfo atlrInitPipelineFragmentShaderStageInfo(const VkShaderModule);
 VkPipelineShaderStageCreateInfo atlrInitPipelineComputeShaderStageInfo(const VkShaderModule);
+VkPipelineVertexInputStateCreateInfo atlrInitVertexInputStateInfo(const AtlrU32 bindingCount, const VkVertexInputBindingDescription* restrict, const AtlrU32 attributeCount, const VkVertexInputAttributeDescription* restrict);
 VkPipelineInputAssemblyStateCreateInfo atlrInitPipelineInputAssemblyStateInfo();
 VkPipelineViewportStateCreateInfo atlrInitPipelineViewportStateInfo();
 VkPipelineRasterizationStateCreateInfo atlrInitPipelineRasterizationStateInfo();
@@ -353,6 +362,24 @@ VkPipelineColorBlendStateCreateInfo atlrInitPipelineColorBlendStateInfo(const Vk
 VkPipelineDynamicStateCreateInfo atlrInitPipelineDynamicStateInfo();
 VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(const AtlrU32 setLayoutCount, const VkDescriptorSetLayout* restrict setLayouts,
 						      const AtlrU32 pushConstantRangeCount, const VkPushConstantRange* restrict pushConstantRanges);
+AtlrU8 atlrInitGraphicsPipeline(AtlrPipeline* restrict,
+				const AtlrU32 stageCount, const VkPipelineShaderStageCreateInfo* restrict,
+				const VkPipelineVertexInputStateCreateInfo* restrict,
+				const VkPipelineInputAssemblyStateCreateInfo* restrict,
+				const VkPipelineTessellationStateCreateInfo* restrict,
+				const VkPipelineViewportStateCreateInfo* restrict,
+				const VkPipelineRasterizationStateCreateInfo* restrict,
+				const VkPipelineMultisampleStateCreateInfo* restrict,
+				const VkPipelineDepthStencilStateCreateInfo* restrict,
+				const VkPipelineColorBlendStateCreateInfo* restrict,
+				const VkPipelineDynamicStateCreateInfo* restrict,
+				const VkPipelineLayoutCreateInfo* restrict,
+				const AtlrDevice* restrict device, const AtlrRenderPass* restrict renderPass);
+AtlrU8 atlrInitComputePipeline(AtlrPipeline* restrict,
+			       const VkPipelineShaderStageCreateInfo* restrict,
+			       const VkPipelineLayoutCreateInfo* restrict,
+			       const AtlrDevice* restrict);
+void atlrDeinitPipeline(const AtlrPipeline* restrict);
 
 // render-pass.c
 VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkImageLayout finalLayout);

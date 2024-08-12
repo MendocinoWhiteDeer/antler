@@ -28,19 +28,12 @@ typedef struct ColorVertex
   
 } ColorVertex;
 
-typedef struct Pipeline
-{
-  VkPipelineLayout layout;
-  VkPipeline pipeline;
-  
-} Pipeline;
-
 static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSwapchain swapchain;
 static AtlrFrameCommandContext commandContext;
 static AtlrMesh quadMesh;
-static Pipeline pipeline;
+static AtlrPipeline pipeline;
 
 static AtlrU8 initPipeline()
 {
@@ -57,87 +50,31 @@ static AtlrU8 initPipeline()
 
   const VkVertexInputBindingDescription vertexInputBindingDescription =
   {
-    .binding = 0,
-    .stride = sizeof(ColorVertex),
-    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    .binding = 0, .stride = sizeof(ColorVertex), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
   };
   const VkVertexInputAttributeDescription vertexInputAttributeDescriptions[2] =
   {
-    (VkVertexInputAttributeDescription)
-    {
-      .location = 0,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32_SFLOAT,
-      .offset = offsetof(ColorVertex, pos)
-    },
-    (VkVertexInputAttributeDescription)
-    {
-      .location = 1,
-      .binding = 0,
-      .format = VK_FORMAT_R32G32B32_SFLOAT,
-      .offset = offsetof(ColorVertex, color)
-    }
+    (VkVertexInputAttributeDescription){.location = 0, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(ColorVertex, pos)},
+    (VkVertexInputAttributeDescription){.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(ColorVertex, color)}
   };
-  const VkPipelineVertexInputStateCreateInfo vertexInputInfo =
-  {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .vertexBindingDescriptionCount = 1,
-    .pVertexBindingDescriptions = &vertexInputBindingDescription,
-    .vertexAttributeDescriptionCount = 2,
-    .pVertexAttributeDescriptions = vertexInputAttributeDescriptions
-  };
+  const VkPipelineVertexInputStateCreateInfo vertexInputInfo = atlrInitVertexInputStateInfo(1, &vertexInputBindingDescription, 2, vertexInputAttributeDescriptions);
 
-  const VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo =
-    atlrInitPipelineInputAssemblyStateInfo();
-  const VkPipelineViewportStateCreateInfo viewportInfo =
-    atlrInitPipelineViewportStateInfo();
-  const VkPipelineRasterizationStateCreateInfo rasterizationInfo =
-    atlrInitPipelineRasterizationStateInfo();
-  const VkPipelineMultisampleStateCreateInfo multisampleInfo =
-    atlrInitPipelineMultisampleStateInfo();
-  const VkPipelineDepthStencilStateCreateInfo depthStencilInfo =
-    atlrInitPipelineDepthStencilStateInfo();
-  const VkPipelineColorBlendAttachmentState colorBlendAttachment =
-    atlrInitPipelineColorBlendAttachmentState();
-  const VkPipelineColorBlendStateCreateInfo colorBlendInfo =
-    atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
-  const VkPipelineDynamicStateCreateInfo dynamicInfo =
-    atlrInitPipelineDynamicStateInfo();
-
+  const VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = atlrInitPipelineInputAssemblyStateInfo();
+  const VkPipelineViewportStateCreateInfo viewportInfo           = atlrInitPipelineViewportStateInfo();
+  const VkPipelineRasterizationStateCreateInfo rasterizationInfo = atlrInitPipelineRasterizationStateInfo();
+  const VkPipelineMultisampleStateCreateInfo multisampleInfo     = atlrInitPipelineMultisampleStateInfo();
+  const VkPipelineDepthStencilStateCreateInfo depthStencilInfo   = atlrInitPipelineDepthStencilStateInfo();
+  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentState();
+  const VkPipelineColorBlendStateCreateInfo colorBlendInfo       = atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
+  const VkPipelineDynamicStateCreateInfo dynamicInfo             = atlrInitPipelineDynamicStateInfo();
+  
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(0, NULL, 0, NULL);
-  if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
-    return 0;
-  }
 
-  const VkGraphicsPipelineCreateInfo pipelineInfo =
+  if(!atlrInitGraphicsPipeline(&pipeline,
+			       2, stageInfos, &vertexInputInfo, &inputAssemblyInfo, NULL, &viewportInfo, &rasterizationInfo, &multisampleInfo, &depthStencilInfo, &colorBlendInfo, &dynamicInfo, &pipelineLayoutInfo,
+			       &device, &swapchain.renderPass))
   {
-    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .stageCount = 2,
-    .pStages = stageInfos,
-    .pVertexInputState = &vertexInputInfo,
-    .pInputAssemblyState = &inputAssemblyInfo,
-    .pTessellationState = NULL,
-    .pViewportState = &viewportInfo,
-    .pRasterizationState = &rasterizationInfo,
-    .pMultisampleState = &multisampleInfo,
-    .pDepthStencilState = &depthStencilInfo,
-    .pColorBlendState = &colorBlendInfo,
-    .pDynamicState = &dynamicInfo,
-    .layout = pipeline.layout,
-    .renderPass = swapchain.renderPass.renderPass,
-    .subpass = 0,
-    .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex = -1
-  };
-  if (vkCreateGraphicsPipelines(device.logical, VK_NULL_HANDLE, 1, &pipelineInfo, instance.allocator, &pipeline.pipeline) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreateGraphicsPipelines did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("atlrInitGraphicsPipeline returned 0.");
     return 0;
   }
 
