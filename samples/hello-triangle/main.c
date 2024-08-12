@@ -66,8 +66,7 @@ static AtlrU8 initPipeline()
   const VkPipelineDynamicStateCreateInfo dynamicInfo =
     atlrInitPipelineDynamicStateInfo();
 
-  const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-    atlrInitPipelineLayoutInfo(0, NULL);
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(0, NULL, 0, NULL);
   if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");

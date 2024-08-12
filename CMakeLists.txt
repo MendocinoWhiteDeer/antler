@@ -121,3 +121,21 @@ compile_shader(
 add_custom_target(hello-triangle-shaders ALL DEPENDS
   "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-vert.spv"
   "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-frag.spv")
+
+# rotating-cube sample
+set(ROTATING_CUBE_SAMPLE_DIR "${SAMPLES_DIR}/rotating-cube")
+set(ROTATING_CUBE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/rotating-cube")
+file(MAKE_DIRECTORY "${ROTATING_CUBE_SAMPLE_BIN_DIR}")
+add_executable(rotating-cube-sample "${ROTATING_CUBE_SAMPLE_DIR}/main.c")
+set_target_properties(rotating-cube-sample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${ROTATING_CUBE_SAMPLE_BIN_DIR}")
+target_link_libraries(rotating-cube-sample PRIVATE antler)
+compile_shader(
+  "${ROTATING_CUBE_SAMPLE_DIR}/cube.vert"
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-vert.spv")
+compile_shader(
+  "${ROTATING_CUBE_SAMPLE_DIR}/cube.frag"
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-frag.spv")
+add_custom_target(rotating-cube-shaders ALL DEPENDS
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-vert.spv"
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-frag.spv")

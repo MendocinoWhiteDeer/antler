@@ -106,8 +106,7 @@ static AtlrU8 initPipeline()
   const VkPipelineDynamicStateCreateInfo dynamicInfo =
     atlrInitPipelineDynamicStateInfo();
 
-  const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-    atlrInitPipelineLayoutInfo(0, NULL);
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(0, NULL, 0, NULL);
   if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
@@ -158,7 +157,7 @@ static AtlrU8 initHelloQuad()
 {
   atlrLog(ATLR_LOG_INFO, "Starting 'Hello Quad' demo ...");
 
-  if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Hello Triangle Demo"))
+  if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Hello Quad Demo"))
   {
     ATLR_ERROR_MSG("atlrInitHostGLFW returned 0.");
     return 0;

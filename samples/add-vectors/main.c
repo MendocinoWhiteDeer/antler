@@ -42,18 +42,18 @@ static Pipeline pipeline;
 static AtlrU8 initStorageBuffers()
 {
   const AtlrU64 size = sizeof(float) * VECTOR_DIM;
-  VkBufferUsageFlags storageUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-  const VkMemoryPropertyFlags storageMemoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+  const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   
   for (AtlrU8 i = 0; i < 3; i++)
   {
     AtlrBuffer* storageBuffer = storageBuffers + i;
     if (i < 2)
-      storageUsage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     else
-      storageUsage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+      usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     
-    if (!atlrInitBuffer(storageBuffer, size, storageUsage, storageMemoryProperties, &device))
+    if (!atlrInitBuffer(storageBuffer, size, usage, memoryProperties, &device))
     {
       ATLR_ERROR_MSG("atlrInitBuffer returned 0.");
       return 0;
@@ -120,7 +120,7 @@ static AtlrU8 initPipeline()
   VkPipelineShaderStageCreateInfo stageInfo =  atlrInitPipelineComputeShaderStageInfo(module);
 
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-    atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout);
+    atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 0, NULL);
   if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");

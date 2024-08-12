@@ -95,19 +95,19 @@ static inline AtlrVec2 atlrVec2Normalize(const AtlrVec2* restrict v)
 {
   float dot = atlrVec2Dot(v, v);
   if (dot == 0.0f) return (AtlrVec2){{0.0f, 0.0f}};
-  else return atlrVec2Scale(v, sqrtf(dot));
+  else return atlrVec2Scale(v, 1.0f / sqrtf(dot));
 }
 static inline AtlrVec3 atlrVec3Normalize(const AtlrVec3* restrict v)
 {
   const float dot = atlrVec3Dot(v, v);
   if (dot == 0.0f) return (AtlrVec3){{0.0f, 0.0f, 0.0f}};
-  else return atlrVec3Scale(v, sqrtf(dot));
+  else return atlrVec3Scale(v, 1.0f / sqrtf(dot));
 }
 static inline AtlrVec4 atlrVec4Normalize(const AtlrVec4* restrict v)
 {
   const float dot = atlrVec4Dot(v, v);
   if (dot == 0.0f) return (AtlrVec4){{0.0f, 0.0f, 0.0f, 0.0f}};
-  else return atlrVec4Scale(v, sqrtf(dot));
+  else return atlrVec4Scale(v, 1.0f / sqrtf(dot));
 }
 
 static inline AtlrVec4 atlrQuatMul(const AtlrVec4* quat1, const AtlrVec4* quat2)
@@ -124,7 +124,7 @@ static inline AtlrVec4 atlrQuatMul(const AtlrVec4* quat1, const AtlrVec4* quat2)
 static inline AtlrVec4 atlrQuatConjugate(const AtlrVec4* restrict quat) { return (AtlrVec4){{ -quat->x, -quat->y, -quat->z, quat->w }}; }
 
 // Convert an axis-angle pair (angle in degrees) into a unit quaternion.
-AtlrVec4 atlrUnitQuatFromAxisAngle(const AtlrVec3* restrict axis, float angle);
+AtlrVec4 atlrUnitQuatFromAxisAngle(const AtlrVec3* restrict axis, const float angle);
 
 // Slerp between two unit quaternions and return a third unit quaternion.
 AtlrVec4 atlrUnitQuatSlerp(const AtlrVec4* restrict quat1, const AtlrVec4* restrict quat2, const float L);
@@ -160,17 +160,18 @@ AtlrMat3 atlrRotFromUnitQuat(const AtlrVec4* quat);
 
 AtlrMat4 atlrLookAt(const AtlrVec3* restrict eyePos, const AtlrVec3* restrict targetPos, const AtlrVec3* restrict worldUpDir);
 
-// The frustrum xNear: [-cot, cot], yNear: [-cot * ratio, cot * ratio], z: [-near, -far] where cot = cotangent(fov * pi / 180) and fov is the field of view angle in degrees
+// The frustrum xNear: [-cot, cot], yNear: [-cot / ratio, cot / ratio], z: [-near, -far] where cot = cotangent(fov * pi / 180) and fov is the field of view angle in degrees
 // is mapped into clip space x: [-1, 1], y: [1, -1], z: [1, 0]
 // This follows the reverse-z convention where higher depths move you to the near plane.
 // A y-flip takes counterclockwise to clockwise ordering (and vice versa).
-AtlrMat4 atlrProjection(const float fov, const float ratio, const float near, const float far);
+AtlrMat4 atlrPerspectiveProjection(const float fov, const float ratio, const float near, const float far);
 
 AtlrNodeTransform atlrNodeTransformMul(const AtlrNodeTransform* restrict node1, const AtlrNodeTransform* restrict node2);
 
-AtlrNodeTransform atlrNodeTransformInverse(const AtlrNodeTransform* restrict);
-
 AtlrNodeTransform atlrNodeTransformInterpolate(const AtlrNodeTransform* restrict node1, const AtlrNodeTransform* restrict node2, const float L);
 
-// Get the node transform in homogeneous coordinates
+// Get the node transform in homogeneous coordinates.
 AtlrMat4 atlrMat4FromNodeTransform(const AtlrNodeTransform* restrict node);
+
+// Matrix for vertex normals. Mat3 padded with zeros.
+AtlrMat4 atlrMat4NormalFromNodeTransform(const AtlrNodeTransform* restrict node);

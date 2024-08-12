@@ -117,16 +117,7 @@ static AtlrU8 initPipeline()
     .offset = 0,
     .size = sizeof(Transform)
   };
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo =
-  {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .setLayoutCount = 0,
-    .pSetLayouts = NULL,
-    .pushConstantRangeCount = 1,
-    .pPushConstantRanges = &pushConstantRange
-  };
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(0, NULL, 1, &pushConstantRange);
   if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
   {
     ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
@@ -177,7 +168,7 @@ static AtlrU8 initConwayLife()
 {
   atlrLog(ATLR_LOG_INFO, "Starting 'Conway's Game of Life' demo ...");
 
-  if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Hello Triangle Demo"))
+  if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Game of Life Demo"))
   {
     ATLR_ERROR_MSG("atlrInitHostGLFW returned 0.");
     return 0;

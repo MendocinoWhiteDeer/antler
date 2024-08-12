@@ -23,14 +23,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define SLERP_TOLERANCE 0.99
 
-AtlrVec4 atlrUnitQuatFromAxisAngle(const AtlrVec3* restrict axis, float angle)
+AtlrVec4 atlrUnitQuatFromAxisAngle(const AtlrVec3* restrict axis, const float angle)
 {
-  const float theta = angle * M_PI / 180;
-  const float cosTheta = cosf(theta);
-  const float sinTheta = sqrtf(1.0f - cosTheta * cosTheta);
+  const float theta = angle * M_PI / 360;
   AtlrVec3 vec = atlrVec3Normalize(axis);
-  vec = atlrVec3Scale(&vec, sinTheta);
-  return (AtlrVec4){{vec.x, vec.y, vec.z, cosTheta}};
+  vec = atlrVec3Scale(&vec, sinf(theta));
+  return (AtlrVec4){{vec.x, vec.y, vec.z, cosf(theta)}};
 }
 
 AtlrVec4 atlrUnitQuatSlerp(const AtlrVec4* restrict quat1, const AtlrVec4* restrict quat2, const float L)
@@ -191,7 +189,7 @@ AtlrMat3 atlrRotFromUnitQuat(const AtlrVec4* quat)
   {{
       1 - 2 * (yy + zz), 2 * (xy + zw)    , 2 * (xz - yw)    ,
       2 * (xy - zw)    , 1 - 2 * (xx + zz), 2 * (yz + xw)    ,
-      2 * (xz + yw)    , 2 * (yz + xw)    , 1 - 2 * (xx + yy)
+      2 * (xz + yw)    , 2 * (yz - xw)    , 1 - 2 * (xx + yy)
   }};
 }
 
@@ -217,15 +215,15 @@ AtlrMat4 atlrLookAt(const AtlrVec3* restrict eyePos, const AtlrVec3* restrict ta
   }};
 }
 
-AtlrMat4 atlrProjection(const float fov, const float ratio, const float near, const float far)
+AtlrMat4 atlrPerspectiveProjection(const float fov, const float ratio, const float near, const float far)
 {
   const float cot = 1.0f / tanf(fov * M_PI / 360);
   const float zDelta = far - near; 
   return (AtlrMat4)
   {{
       cot,          0.0f, 0.0f               , 0.0f ,
-      0.0f, -cot * ratio, 0.0f               , 0.0f ,
-      0.0f, 0.0f        , near / zDelta      , -1.0f,
+      0.0f, -cot / ratio, 0.0f               , 0.0f ,
+      0.0f, 0.0f        , -near / zDelta     , -1.0f,
       0.0f, 0.0f        , near * far / zDelta,  0.0f
   }};
 }
@@ -250,15 +248,6 @@ AtlrNodeTransform atlrNodeTransformMul(const AtlrNodeTransform* restrict node1, 
   return result;
 }
 
-AtlrNodeTransform atlrNodeTransformInverse(const AtlrNodeTransform* restrict node)
-{
-  AtlrNodeTransform result;
-  result.scale = (AtlrVec3){{ 1.0f / node->scale.x, 1.0f / node->scale.y, 1.0f / node->scale.z }};
-  result.rotate = atlrQuatConjugate(&node->rotate);
-  result.translate = (AtlrVec3){{ -node->translate.x, -node->translate.y, -node->translate.z }};
-  return result;
-}
-
 AtlrNodeTransform atlrNodeTransformInterpolate(const AtlrNodeTransform* restrict node1, const AtlrNodeTransform* restrict node2, const float L)
 {
   AtlrNodeTransform result;
@@ -270,14 +259,30 @@ AtlrNodeTransform atlrNodeTransformInterpolate(const AtlrNodeTransform* restrict
 
 AtlrMat4 atlrMat4FromNodeTransform(const AtlrNodeTransform* restrict node)
 {
-  AtlrMat3 mat = atlrRotFromUnitQuat(&node->rotate);
-  mat = atlrMat3MulDiag3(&mat, &node->scale);
+  AtlrMat3 mat3 = atlrRotFromUnitQuat(&node->rotate);
+  mat3 = atlrMat3MulDiag3(&mat3, &node->scale);
   const AtlrVec3* t = &node->translate;
+
   return (AtlrMat4)
   {{
-      mat.xx, mat.yx, mat.zx, 0.0f,
-      mat.xy, mat.yy, mat.zy, 0.0f,
-      mat.xz, mat.yz, mat.zz, 0.0f,
-      t->x  , t->y  , t->z  , 1.0f
+      mat3.xx, mat3.yx, mat3.zx, 0.0f,
+      mat3.xy, mat3.yy, mat3.zy, 0.0f,
+      mat3.xz, mat3.yz, mat3.zz, 0.0f,
+      t->x   , t->y   , t->z   , 1.0f
+  }};
+}
+
+AtlrMat4 atlrMat4NormalFromNodeTransform(const AtlrNodeTransform* restrict node)
+{
+  AtlrMat3 mat3 = atlrRotFromUnitQuat(&node->rotate);
+  AtlrVec3 scale = {{1.0f / node->scale.x, 1.0f / node->scale.y, 1.0f / node->scale.z}};
+  mat3 = atlrMat3MulDiag3(&mat3, &scale);
+
+  return (AtlrMat4)
+  {{
+      mat3.xx, mat3.yx, mat3.zx, 0.0f,
+      mat3.xy, mat3.yy, mat3.zy, 0.0f,
+      mat3.xz, mat3.yz, mat3.zz, 0.0f,
+      0.0f   , 0.0f   , 0.0f   , 0.0f
   }};
 }

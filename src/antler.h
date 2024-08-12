@@ -233,6 +233,10 @@ void atlrLog(AtlrLoggerType, const char* restrict format, ...);
 #define ATLR_FATAL_MSG(format, ...) atlrLog(ATLR_LOG_FATAL, "{Location: %s:%d}: " format, __FILE__, __LINE__, ##__VA_ARGS__) 
 
 // util.c
+float atlrClampFloat(const float x, const float min, const float max);
+void* atlrAlignedMalloc(const AtlrU64 size, const AtlrU64 alignment);
+void atlrAlignedFree(void* data);
+AtlrU8 atlrAlign(AtlrU64* aligned, const AtlrU64 offset, const AtlrU64 alignment);
 AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDevice physical, const AtlrU32 typeFilter, const VkMemoryPropertyFlags properties);
 
 // instance.c
@@ -273,6 +277,7 @@ AtlrU8 atlrEndFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict);
 VkCommandBuffer atlrGetFrameCommandContextCommandBufferHostGLFW(const AtlrFrameCommandContext* restrict);
 
 // buffer.c
+AtlrU8 atlrUniformBufferAlignment(AtlrU64* restrict aligned, const AtlrU64 offset, const AtlrDevice* restrict);
 AtlrU8 atlrInitBuffer(AtlrBuffer* restrict, const AtlrU64 size, const VkBufferUsageFlags, const VkMemoryPropertyFlags,
 		      const AtlrDevice*);
 AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
@@ -346,7 +351,8 @@ VkPipelineDepthStencilStateCreateInfo atlrInitPipelineDepthStencilStateInfo();
 VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentState();
 VkPipelineColorBlendStateCreateInfo atlrInitPipelineColorBlendStateInfo(const VkPipelineColorBlendAttachmentState* restrict);
 VkPipelineDynamicStateCreateInfo atlrInitPipelineDynamicStateInfo();
-VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(AtlrU32 setLayoutCount, const VkDescriptorSetLayout* restrict);
+VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(const AtlrU32 setLayoutCount, const VkDescriptorSetLayout* restrict setLayouts,
+						      const AtlrU32 pushConstantRangeCount, const VkPushConstantRange* restrict pushConstantRanges);
 
 // render-pass.c
 VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkImageLayout finalLayout);

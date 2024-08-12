@@ -232,7 +232,8 @@ VkPipelineDynamicStateCreateInfo atlrInitPipelineDynamicStateInfo()
   };
 }
 
-VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(AtlrU32 setLayoutCount, const VkDescriptorSetLayout* restrict setLayouts)
+VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(const AtlrU32 setLayoutCount, const VkDescriptorSetLayout* restrict setLayouts,
+						      const AtlrU32 pushConstantRangeCount, const VkPushConstantRange* restrict pushConstantRanges)
 {
   return (VkPipelineLayoutCreateInfo)
   {
@@ -241,7 +242,7 @@ VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(AtlrU32 setLayoutCount, co
     .flags = 0,
     .setLayoutCount = setLayoutCount,
     .pSetLayouts = setLayouts,
-    .pushConstantRangeCount = 0,
-    .pPushConstantRanges = NULL
+    .pushConstantRangeCount = pushConstantRangeCount,
+    .pPushConstantRanges = pushConstantRanges
   };
 }

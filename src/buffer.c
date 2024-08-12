@@ -20,6 +20,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
+AtlrU8 atlrUniformBufferAlignment(AtlrU64* restrict aligned, const AtlrU64 offset, const AtlrDevice* restrict device)
+{
+  VkPhysicalDeviceProperties properties;
+  vkGetPhysicalDeviceProperties(device->physical, &properties);
+  if (!atlrAlign(aligned, offset, properties.limits.minUniformBufferOffsetAlignment))
+  {
+    ATLR_ERROR_MSG("atlrAlign returned 0.");
+    return 0;
+  }
+
+  return 1;
+}
+
 AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
 		      const AtlrDevice* device)
 {

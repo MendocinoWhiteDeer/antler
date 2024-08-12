@@ -20,16 +20,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #version 460
 
-layout(location = 0) in vec2 inPos;
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec3 inNormal;
 
-layout(push_constant) uniform Transform
+layout(location = 0) out vec3 outNormal;
+layout(location = 1) out vec3 outLightDir;
+
+layout(binding = 0) uniform Camera
 {
-	vec2 translate;
-	vec2 scale;
+	vec4 eye;
+	mat4 view;
+	mat4 perspective;
+
+} camera;
+
+layout(push_constant) uniform World
+{
+	mat4 transform;
+	mat4 normalTransform;
 	
-} transform;
+} world;
 
 void main()
 {
-	gl_Position = vec4(transform.scale * inPos + transform.translate, 0.0, 1.0);
+	outNormal = mat3(world.normalTransform) * inNormal;
+	vec4 worldPos = world.transform * vec4(inPos, 1.0f);
+	outLightDir = normalize(vec3(worldPos - camera.eye));
+	gl_Position = camera.perspective * camera.view * worldPos;
 }
