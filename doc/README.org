@@ -119,22 +119,14 @@ s(t + n * period) = [1 + 0.5 * sin((2 * pi * t) / period)]^(-1/2)
 
 Consider a new parameter alpha, which is initialized to zero. The update procedure is
 
-1. If t needs to be clamped during simulation, shift it by subtracting the period n times until it is back in the interval [0, period).
-   Then update alpha by adding  n * period * omega(0). Clamp alpha to the interval [0, 2 * pi)
+1. On update, if t leaves the interval [0, period), shift it by subtracting the period n times until it is back in the interval.
+   Then update alpha by adding  n * period * omega(0). Shift alpha in steps of 2 * pi until it is in the interval [0, 2 * pi).
 2. Store the side-length from the previous frame.
    Set s = [1 + 0.5 * sin((2 * pi * t) / period)]^(-1/2)
 3. Store the angle from the previous frame.
    Set angle = alpha + (t - (period / (4 * pi)) *  cos((2 * pi * t) / period)) * omega(0).
-   A naive clamp will cause problems when interpolating between the previous and current update frames.
+   Naive, individual shifts will cause problems when interpolating between the previous and current update frames.
    The angle of the current and previous update frames both need to be shifted the same amount.
-   There are two situations in general to consider:
-   a. angle < 0.
-   Add 2 * pi * p to the angle in the current frame and the angle in the previous frame.
-   b. angle > 2 * pi.
-   Subtract 2 * pi * p from the angle in the current frame and the angle in the previous frame.  
-
-   Situation a. shouldn't happen in this particular case because theta increases monotonically in the time interval,
-   but I've included it in the code anyway.
 
 *** hello-quad
 
