@@ -48,6 +48,9 @@ GLFW: https://github.com/glfw/glfw
 Vulkan
 
 ** Samples
+
+Sample documentation: https://github.com/MendocinoWhiteDeer/antler-sample-documentation
+
 *** add-vectors
 
 After providing a seed, this sample uses a compute shader to add two random vectors of a fixed size.
@@ -75,64 +78,7 @@ Updates occur with a fixed time step, then we interpolate between update frames 
 Basic diffuse lighting is used to give the cube some dimensionality.
 The light source is a directional light parallel to the displacement between the camera and the cube.
 
-For unit mass m and side length s(t) as a function of time in seconds t,
-the rotational inertia tensor of a cube is simply a scaling of the identity matrix:
-
-I(t) = (m/6) * s(t)^2 * diag(1, 1, 1)
-
-Let omega(t) represent the rotational velocity psuedovector.
-For fixed mass, conservation of rotational momentum demands:
-
-omega(t) * s(t)^2 = omega(0) * s(0)^2
-
-Now we need to integrate omega(t). s(t) must be a periodic function strictly greater than zero.
-If s(t) were zero, conservation of rotational momentum would be violated.
-
-To avoid numerical integration, lets choose something nice and easy.
-
-s(t) = [a + b * sin((2 * pi * t) / period)]^(-1/2), with a > b.
-
-So s(0)^2 = 1 / a, and 
-
-omega(t) = (1  + (b / a) * sin((2 * pi * t) / period)) * omega(0)
-
-When programming this, we can convert omega into an axis-angle representation.
-The axis stays fixed over time, equal to the normalization of omega(0).
-The angle is v(t) = (1 + (b / a) * sin((2 * pi * t) / period)) * v0, where v0 is the norm of omega(0).
-
-The period is not the period of the cube's rotation, but the period of s(t).
-We can now integrate v(t), a function which we call theta(t).
-
-theta(t) = (t - (b * period) / (2 * a * pi) * cos((2 * pi * t) / period) + C) * v0, where C is some constant
-
-theta(0) = 0 implies
-theta(t) = (t + (b * period) / (2 * a * pi) * (1 - cos((2 * pi * t) / period))) * v0
-
-It is worth mentioning that rather than approximating theta(t) with a time step and an integration technique,
-we are plugging in an ever-increasing value for t.
-This means that t loses decimal precision as the simulation runs.
-The simulation likely won't run so long, but I'll consider this a fun little extra feature.
-
-Restrict t to the interval [0, period). If n is some natural number, then
-
-theta(t + n * period) - theta(n * period) = (t - (b * period) / (2 * pi) *  cos((2 * pi * t) / period)) * v0
-, where angle(n * period) = n * period * v0.
-s(t + n * period) = [a + b * sin((2 * pi * t) / period)]^(-1/2)
-
-Consider a new parameter alpha, which is initialized to zero. The update procedure is
-
-1. On update, if t leaves the interval [0, period), shift it by subtracting the period n times until it is back in the interval.
-   Then update alpha by adding  n * period * v0. Shift alpha in steps of 2 * pi until it is in the interval [0, 2 * pi).
-2. Store s from the previous frame.
-   Set s = [a + b * sin((2 * pi * t) / period)]^(-1/2)
-3. Store theta from the previous frame.
-   Set theta = alpha + (t - (b * period) / (2 * a * pi)) *  cos((2 * pi * t) / period)) * v0.
-   Naive individual shifts will cause problems when interpolating between the previous and current update frames.
-   The theta values of the current and previous update frames both need to be shifted the same amount.
-
-The maximum rotational speed is obtained at v(period / 2) = (1 + b / a) * v0.
-The minimum roational speed is obtained at v(3 * period / 2) = (1 - b / a) * v0.
-The ratio of these two quantities is (a + b) / (a - b), so increasing a and b with a > b will create more drastic changes in the rotational speed.
+Further details can be found in the sample documentation.
 
 *** hello-quad
 
