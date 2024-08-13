@@ -63,7 +63,7 @@ set_target_properties(add-vectors-sample PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${ADD_VECTORS_SAMPLE_BIN_DIR}")
 target_link_libraries(add-vectors-sample PRIVATE antler)
 compile_shader(
-  "${ADD_VECTORS_SAMPLE_DIR}/add.comp"
+  "${ADD_VECTORS_SAMPLE_DIR}/add.comp.glsl"
   "${ADD_VECTORS_SAMPLE_BIN_DIR}/add-comp.spv")
 add_custom_target(add-vectors-shaders ALL DEPENDS
   "${ADD_VECTORS_SAMPLE_BIN_DIR}/add-comp.spv")
@@ -77,10 +77,10 @@ set_target_properties(game-of-life-sample PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CONWAY_LIFE_SAMPLE_BIN_DIR}")
 target_link_libraries(game-of-life-sample PRIVATE antler)
 compile_shader(
-  "${CONWAY_LIFE_SAMPLE_DIR}/quad.vert"
+  "${CONWAY_LIFE_SAMPLE_DIR}/quad.vert.glsl"
   "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-vert.spv")
 compile_shader(
-  "${CONWAY_LIFE_SAMPLE_DIR}/quad.frag"
+  "${CONWAY_LIFE_SAMPLE_DIR}/quad.frag.glsl"
   "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-frag.spv")
 add_custom_target(game-of-life-shaders ALL DEPENDS
   "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-vert.spv"
@@ -95,10 +95,10 @@ set_target_properties(hello-quad-sample PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${HELLO_QUAD_SAMPLE_BIN_DIR}")
 target_link_libraries(hello-quad-sample PRIVATE antler)
 compile_shader(
-  "${HELLO_QUAD_SAMPLE_DIR}/quad.vert"
+  "${HELLO_QUAD_SAMPLE_DIR}/quad.vert.glsl"
   "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-vert.spv")
 compile_shader(
-  "${HELLO_QUAD_SAMPLE_DIR}/quad.frag"
+  "${HELLO_QUAD_SAMPLE_DIR}/quad.frag.glsl"
   "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-frag.spv")
 add_custom_target(hello-quad-shaders ALL DEPENDS
   "${HELLO_QUAD_SAMPLE_BIN_DIR}/quad-vert.spv"
@@ -113,10 +113,10 @@ set_target_properties(hello-triangle-sample PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}")
 target_link_libraries(hello-triangle-sample PRIVATE antler)
 compile_shader(
-  "${HELLO_TRIANGLE_SAMPLE_DIR}/triangle.vert"
+  "${HELLO_TRIANGLE_SAMPLE_DIR}/triangle.vert.glsl"
   "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-vert.spv")
 compile_shader(
-  "${HELLO_TRIANGLE_SAMPLE_DIR}/triangle.frag"
+  "${HELLO_TRIANGLE_SAMPLE_DIR}/triangle.frag.glsl"
   "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-frag.spv")
 add_custom_target(hello-triangle-shaders ALL DEPENDS
   "${HELLO_TRIANGLE_SAMPLE_BIN_DIR}/triangle-vert.spv"
@@ -131,10 +131,10 @@ set_target_properties(rotating-cube-sample PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${ROTATING_CUBE_SAMPLE_BIN_DIR}")
 target_link_libraries(rotating-cube-sample PRIVATE antler)
 compile_shader(
-  "${ROTATING_CUBE_SAMPLE_DIR}/cube.vert"
+  "${ROTATING_CUBE_SAMPLE_DIR}/cube.vert.glsl"
   "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-vert.spv")
 compile_shader(
-  "${ROTATING_CUBE_SAMPLE_DIR}/cube.frag"
+  "${ROTATING_CUBE_SAMPLE_DIR}/cube.frag.glsl"
   "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-frag.spv")
 add_custom_target(rotating-cube-shaders ALL DEPENDS
   "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-vert.spv"
