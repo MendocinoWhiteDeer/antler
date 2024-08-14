@@ -31,7 +31,7 @@ static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSwapchain swapchain;
 static AtlrFrameCommandContext commandContext;
-static Pipeline pipeline;
+static AtlrPipeline pipeline;
 
 static AtlrU8 initPipeline()
 {
@@ -49,55 +49,22 @@ static AtlrU8 initPipeline()
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-  const VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo =
-    atlrInitPipelineInputAssemblyStateInfo();
-  const VkPipelineViewportStateCreateInfo viewportInfo =
-    atlrInitPipelineViewportStateInfo();
-  const VkPipelineRasterizationStateCreateInfo rasterizationInfo =
-    atlrInitPipelineRasterizationStateInfo();
-  const VkPipelineMultisampleStateCreateInfo multisampleInfo =
-    atlrInitPipelineMultisampleStateInfo();
-  const VkPipelineDepthStencilStateCreateInfo depthStencilInfo =
-    atlrInitPipelineDepthStencilStateInfo();
-  const VkPipelineColorBlendAttachmentState colorBlendAttachment =
-    atlrInitPipelineColorBlendAttachmentState();
-  const VkPipelineColorBlendStateCreateInfo colorBlendInfo =
-    atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
-  const VkPipelineDynamicStateCreateInfo dynamicInfo =
-    atlrInitPipelineDynamicStateInfo();
+  const VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = atlrInitPipelineInputAssemblyStateInfo();
+  const VkPipelineViewportStateCreateInfo viewportInfo           = atlrInitPipelineViewportStateInfo();
+  const VkPipelineRasterizationStateCreateInfo rasterizationInfo = atlrInitPipelineRasterizationStateInfo();
+  const VkPipelineMultisampleStateCreateInfo multisampleInfo     = atlrInitPipelineMultisampleStateInfo();
+  const VkPipelineDepthStencilStateCreateInfo depthStencilInfo   = atlrInitPipelineDepthStencilStateInfo();
+  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentState();
+  const VkPipelineColorBlendStateCreateInfo colorBlendInfo       = atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
+  const VkPipelineDynamicStateCreateInfo dynamicInfo             = atlrInitPipelineDynamicStateInfo();
 
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(0, NULL, 0, NULL);
-  if (vkCreatePipelineLayout(device.logical, &pipelineLayoutInfo, instance.allocator, &pipeline.layout) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreatePipelineLayout did not return VK_SUCCESS.");
-    return 0;
-  }
 
-  const VkGraphicsPipelineCreateInfo pipelineInfo =
+  if(!atlrInitGraphicsPipeline(&pipeline,
+			       2, stageInfos, &vertexInputInfo, &inputAssemblyInfo, NULL, &viewportInfo, &rasterizationInfo, &multisampleInfo, &depthStencilInfo, &colorBlendInfo, &dynamicInfo, &pipelineLayoutInfo,
+			       &device, &swapchain.renderPass))
   {
-    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .stageCount = 2,
-    .pStages = stageInfos,
-    .pVertexInputState = &vertexInputInfo,
-    .pInputAssemblyState = &inputAssemblyInfo,
-    .pTessellationState = NULL,
-    .pViewportState = &viewportInfo,
-    .pRasterizationState = &rasterizationInfo,
-    .pMultisampleState = &multisampleInfo,
-    .pDepthStencilState = &depthStencilInfo,
-    .pColorBlendState = &colorBlendInfo,
-    .pDynamicState = &dynamicInfo,
-    .layout = pipeline.layout,
-    .renderPass = swapchain.renderPass.renderPass,
-    .subpass = 0,
-    .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex = -1
-  };
-  if (vkCreateGraphicsPipelines(device.logical, VK_NULL_HANDLE, 1, &pipelineInfo, instance.allocator, &pipeline.pipeline) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkCreateGraphicsPipelines did not return VK_SUCCESS.");
+    ATLR_ERROR_MSG("atlrInitGraphicsPipeline returned 0.");
     return 0;
   }
 
@@ -109,8 +76,7 @@ static AtlrU8 initPipeline()
 
 static void deinitPipeline()
 {
-  vkDestroyPipelineLayout(device.logical, pipeline.layout, instance.allocator);
-  vkDestroyPipeline(device.logical, pipeline.pipeline, instance.allocator);
+  atlrDeinitPipeline(&pipeline);
 }
   
 static AtlrU8 initHelloTriangle()
@@ -198,7 +164,7 @@ int main()
     }
 
     const VkCommandBuffer commandBuffer = atlrGetFrameCommandContextCommandBufferHostGLFW(&commandContext);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+    vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
     if (!atlrEndFrameCommandsHostGLFW(&commandContext))

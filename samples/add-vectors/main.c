@@ -243,8 +243,8 @@ int main()
       return -1;
     }
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 0, 1, &descriptorSet, 0, NULL);
+    vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);
+    vkCmdBindDescriptorSets(commandBuffer, pipeline.bindPoint, pipeline.layout, 0, 1, &descriptorSet, 0, NULL);
     vkCmdDispatch(commandBuffer, VECTOR_DIM, 1, 1);
   
     if (!atlrEndSingleRecordCommands(commandBuffer, &commandContext))

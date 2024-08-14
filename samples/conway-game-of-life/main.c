@@ -282,7 +282,7 @@ int main()
     }
 
     const VkCommandBuffer commandBuffer = atlrGetFrameCommandContextCommandBufferHostGLFW(&commandContext);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+    vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);
     atlrBindMesh(&quadMesh, commandBuffer);
 
     for (AtlrU32 i = 0; i < columns; i++)
