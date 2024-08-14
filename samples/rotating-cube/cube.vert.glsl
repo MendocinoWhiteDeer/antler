@@ -28,7 +28,7 @@ layout(location = 1) out vec3 outLightDir;
 
 layout(binding = 0) uniform Camera
 {
-	vec4 eye;
+	vec4 eyePos;
 	mat4 view;
 	mat4 perspective;
 
@@ -45,6 +45,6 @@ void main()
 {
 	outNormal = mat3(world.normalTransform) * inNormal;
 	vec4 worldPos = world.transform * vec4(inPos, 1.0f);
-	outLightDir = normalize(vec3(worldPos - camera.eye));
+	outLightDir = normalize(vec3(worldPos - camera.eyePos));
 	gl_Position = camera.perspective * camera.view * worldPos;
 }

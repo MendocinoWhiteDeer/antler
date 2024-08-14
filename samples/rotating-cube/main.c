@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "../../src/antler.h"
 #include "../../src/transforms.h"
+#include "../../src/camera.h"
 #include <time.h>
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -31,14 +32,6 @@ typedef struct Vertex
   
 } Vertex;
 
-typedef struct Camera
-{
-  AtlrVec4 eye;
-  AtlrMat4 view;
-  AtlrMat4 perspective;
-  
-} Camera;
-
 typedef struct WorldTransform
 {
   AtlrMat4 transform;
@@ -46,99 +39,14 @@ typedef struct WorldTransform
   
 } WorldTransform;
 
-// projection planes
-static const float fov = 45;
-static const float nearPlane = 0.1f;
-static const float farPlane = 100.0f;
-
 static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSwapchain swapchain;
 static AtlrSingleRecordCommandContext singleRecordCommandContext;
 static AtlrFrameCommandContext commandContext;
 static AtlrMesh cubeMesh;
-static Camera camera;
-static AtlrBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
-static AtlrDescriptorSetLayout descriptorSetLayout;
-static AtlrDescriptorPool descriptorPool;
-static VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
+static AtlrPerspectiveCamera camera;
 static AtlrPipeline pipeline;
-
-static AtlrU8 initUniformBuffers()
-{ 
-  const AtlrU64 size = sizeof(Camera);
-  const VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-  {
-    if (!atlrInitBuffer(uniformBuffers + i, size, usage, memoryProperties, &device))
-    {
-      ATLR_ERROR_MSG("atlrInitBuffer returned 0.");
-      return 0;
-    }
-    if (!atlrMapBuffer(uniformBuffers + i, 0, size, 0))
-    {
-      ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
-      return 0;
-    }
-  }
-
-  return 1;
-}
-
-static void deinitUniformBuffers()
-{
-  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    atlrDeinitBuffer(uniformBuffers + i);
-}
-
-static AtlrU8 initDescriptor()
-{
-  const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-  const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding =
-    atlrInitDescriptorSetLayoutBinding(0, type, VK_SHADER_STAGE_VERTEX_BIT);
-  if (!atlrInitDescriptorSetLayout(&descriptorSetLayout, 1, &descriptorSetLayoutBinding, &device))
-  {
-    ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
-    return 0;
-  }
-
-  const VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, MAX_FRAMES_IN_FLIGHT);
-  if (!atlrInitDescriptorPool(&descriptorPool, MAX_FRAMES_IN_FLIGHT, 1, &poolSize, &device))
-  {
-    ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
-    return 0;
-  }
-
-  VkDescriptorSetLayout setLayouts[MAX_FRAMES_IN_FLIGHT];
-  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) setLayouts[i] = descriptorSetLayout.layout;
-  if (!atlrAllocDescriptorSets(&descriptorPool, MAX_FRAMES_IN_FLIGHT, setLayouts, descriptorSets))
-  {
-    ATLR_ERROR_MSG("atlrAllocDescriptorSets returned 0.");
-    return 0;
-  }
-
-  VkDescriptorBufferInfo bufferInfos[MAX_FRAMES_IN_FLIGHT];
-  VkWriteDescriptorSet descriptorWrites[MAX_FRAMES_IN_FLIGHT];
-  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-  {
-    bufferInfos[i] = atlrInitDescriptorBufferInfo(uniformBuffers + i, sizeof(Camera));
-    descriptorWrites[i] = atlrWriteBufferDescriptorSet(descriptorSets[i], 0, type, bufferInfos + i);
-  }
-  vkUpdateDescriptorSets(device.logical, MAX_FRAMES_IN_FLIGHT, descriptorWrites, 0, NULL);
-
-  return 1;
-}
-
-static void deinitDescriptor()
-{
-  atlrDeinitDescriptorPool(&descriptorPool);
-  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    descriptorSets[i] = VK_NULL_HANDLE;
-  atlrDeinitDescriptorSetLayout(&descriptorSetLayout);
-}
 
 static AtlrU8 initPipeline()
 {
@@ -177,7 +85,7 @@ static AtlrU8 initPipeline()
   {
     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(WorldTransform)
   };
-  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 1, &pushConstantRange);
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(1, &camera.descriptorSetLayout.layout, 1, &pushConstantRange);
 
   if(!atlrInitGraphicsPipeline(&pipeline,
 			       2, stageInfos, &vertexInputInfo, &inputAssemblyInfo, NULL, &viewportInfo, &rasterizationInfo, &multisampleInfo, &depthStencilInfo, &colorBlendInfo, &dynamicInfo, &pipelineLayoutInfo,
@@ -327,37 +235,22 @@ static AtlrU8 initRotatingCube()
     return 0;
   }
 
-  if (!initUniformBuffers())
+  if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
   {
-    ATLR_ERROR_MSG("initUniformBuffers returned 0.");
+    ATLR_ERROR_MSG("atlrInitPerspectiveCameraHostGLFW returned 0.");
     return 0;
   }
-
-  if (!initDescriptor())
   {
-    ATLR_ERROR_MSG("initDescriptor returned 0.");
-    return 0;
+    const AtlrVec3 eyePos = {{8.0f, 0.0f, 4.0f}};
+    const AtlrVec3 targetPos = {{0.0f, 0.0f, 0.0f}};
+    const AtlrVec3 worldUpDir = {{0.0f, 0.0f, 1.0f}};
+    atlrPerspectiveCameraLookAtHostGLFW(&camera, &eyePos, &targetPos, &worldUpDir);
   }
 
   if (!initPipeline())
   {
     ATLR_ERROR_MSG("initPipeline returned 0.");
     return 0;
-  }
-
-  // camera
-  {
-    const AtlrVec3 eye = {{8.0f, 0.0f, 4.0f}};
-    const AtlrVec3 targetPos = {{0.0f, 0.0f, 0.0f}};
-    const AtlrVec3 worldUpDir = {{0.0f, 0.0f, 1.0f}};
-    camera.eye = (AtlrVec4){{eye.x, eye.y, eye.z, 0.0f}};
-    camera.view = atlrLookAt(&eye, &targetPos, &worldUpDir);
-  }
-  {
-    GLFWwindow* window = instance.data;
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    camera.perspective = atlrPerspectiveProjection(fov, (float)height / width, nearPlane, farPlane);
   }
 
   return 1;
@@ -370,8 +263,7 @@ static void deinitRotatingCube()
   vkDeviceWaitIdle(device.logical);
   
   deinitPipeline();
-  deinitDescriptor();
-  deinitUniformBuffers();
+  atlrDeinitPerspectiveCameraHostGLFW(&camera);
   atlrDeinitMesh(&cubeMesh);
   atlrDeinitFrameCommandContextHostGLFW(&commandContext);
   atlrDeinitSingleRecordCommandContext(&singleRecordCommandContext);
@@ -379,7 +271,6 @@ static void deinitRotatingCube()
   atlrDeinitDeviceHost(&device);
   atlrDeinitInstanceHostGLFW(&instance);
 }
-
 
 int main()
 {
@@ -477,16 +368,12 @@ int main()
     world.normalTransform = atlrMat4NormalFromNodeTransform(&interpolatedNode);
 
     // update camera
-    {
-      int width, height;
-      glfwGetFramebufferSize(window, &width, &height);
-      camera.perspective = atlrPerspectiveProjection(fov, (float)height / width, nearPlane, farPlane);
-    }
-    memcpy(uniformBuffers[commandContext.currentFrame].data, &camera, sizeof(camera));
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, descriptorSets + commandContext.currentFrame, 0, NULL);
+    atlrUpdatePerspectiveCameraHostGLFW(&camera, commandContext.currentFrame);
+    // bind camera descriptor set
+    vkCmdBindDescriptorSets(commandBuffer, pipeline.bindPoint, pipeline.layout, 0, 1, camera.descriptorSets + commandContext.currentFrame, 0, NULL);
 
     // draw
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+    vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);
     atlrBindMesh(&cubeMesh, commandBuffer);
     vkCmdPushConstants(commandBuffer, pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(WorldTransform), &world);
     atlrDrawMesh(&cubeMesh, commandBuffer);

@@ -181,6 +181,7 @@ typedef struct _AtlrPipeline
   const AtlrDevice* device;
   VkPipelineLayout layout;
   VkPipeline pipeline;
+  VkPipelineBindPoint bindPoint;
   
 } AtlrPipeline;
 

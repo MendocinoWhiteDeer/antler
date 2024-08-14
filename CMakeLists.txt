@@ -28,7 +28,8 @@ add_library(antler
   "src/descriptor.c"
   "src/pipeline.c"
   "src/render-pass.c"
-  "src/swapchain.c")
+  "src/swapchain.c"
+  "src/camera.c")
 target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 # GLFW

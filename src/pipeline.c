@@ -312,6 +312,8 @@ AtlrU8 atlrInitGraphicsPipeline(AtlrPipeline* restrict pipeline,
     return 0;
   }
 
+  pipeline->bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
   return 1;
 }
 
@@ -343,6 +345,8 @@ AtlrU8 atlrInitComputePipeline(AtlrPipeline* restrict pipeline,
     ATLR_ERROR_MSG("vkCreateComputePipelines did not return VK_SUCCESS.");
     return 0;
   }
+
+  pipeline->bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 
   return 1;
 }
