@@ -45,7 +45,7 @@ GLFW: https://github.com/glfw/glfw
 
 *** System installation
 
-Vulkan
+Vulkan SDK
 
 ** Samples
 
@@ -69,6 +69,13 @@ If the cell is active it is rendered as white.
 **** References
 
 Gardner, M. (1970). MATHEMATICAL GAMES. Scientific American, 223(4), 120–123. http://www.jstor.org/stable/24927642
+
+*** fragment-shader-client
+
+A client for running frament shaders. You pass in a path to glsl shader code and the client compiles it and displays with it.
+The idea was to make a tiny tool that is a bit similiar to shadertoy, with some provided user inputs.
+
+Further details can be found in the sample documentation.
 
 *** rotating-cube
 

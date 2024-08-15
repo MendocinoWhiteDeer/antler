@@ -29,7 +29,7 @@ static const VkDynamicState dynamicStates[] =
 
 VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice* restrict device)
 {
-  FILE* file = fopen(path, "rb");;
+  FILE* file = fopen(path, "rb");
   if (!file)
   {
     ATLR_ERROR_MSG("Failed to open file at path \"%s\".", path);
@@ -39,6 +39,7 @@ VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice*
   const long int codeSize = ftell(file);
   rewind(file);
   char* bytes = malloc((codeSize + 1) * sizeof(char));
+  bytes[codeSize] = '\0';
   fread(bytes, codeSize, 1, file);
   fclose(file);
 
@@ -47,13 +48,14 @@ VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice*
   const VkShaderModuleCreateInfo moduleInfo =
   {
     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-    .pNext = 0,
+    .pNext = NULL,
     .flags = 0,
     .codeSize = codeSize,
     .pCode = code
   };
   if (vkCreateShaderModule(device->logical, &moduleInfo, device->instance->allocator, &module) != VK_SUCCESS)
   {
+    ATLR_ERROR_MSG("vkCreateShaderModule did not return VK_SUCCESS.");
     free(bytes);
     return VK_NULL_HANDLE;
   }

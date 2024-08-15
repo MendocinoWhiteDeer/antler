@@ -4,7 +4,7 @@ set(CMAKE_C_STANDARD 99)
 
 message("Configuring antler ...")
 
-find_package(Vulkan REQUIRED)
+#find_package(glslang REQUIRED)
 
 # default to release build if unspecified
 if(NOT CMAKE_BUILD_TYPE)
@@ -16,7 +16,7 @@ message("Build type: ${CMAKE_BUILD_TYPE}")
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall -DATLR_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 
-add_library(antler
+add_library(antler	
   "src/transforms.c"
   "src/logger.c"
   "src/util.c"
@@ -38,8 +38,10 @@ target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/lib/glfw/include
 target_link_libraries(antler PUBLIC glfw)
 
 # Vulkan
+message("Requiring package \'Vulkan\'")
+find_package(Vulkan REQUIRED)
 target_include_directories(antler PUBLIC "${Vulkan_INCLUDE_DIRS}")
-target_link_libraries(antler PUBLIC "${Vulkan_LIBRARIES}")
+target_link_libraries(antler PUBLIC "${Vulkan_LIBRARIES}" glslang SPIRV glslang-default-resource-limits)
 
 # shader compilation
 function (compile_shader input_file output_file)
@@ -86,6 +88,22 @@ compile_shader(
 add_custom_target(game-of-life-shaders ALL DEPENDS
   "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-vert.spv"
   "${CONWAY_LIFE_SAMPLE_BIN_DIR}/quad-frag.spv")
+
+#fragment-shader-client sample
+set(FRAGMENT_SHADER_CLIENT_SAMPLE_DIR "${SAMPLES_DIR}/fragment-shader-client")
+set(FRAGMENT_SHADER_CLIENT_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/fragment-shader-client")
+file(MAKE_DIRECTORY "${FRAGMENT_SHADER_CLIENT_SAMPLE_BIN_DIR}")
+add_executable(fragment-shader-client-sample "${FRAGMENT_SHADER_CLIENT_SAMPLE_DIR}/main.c")
+set_target_properties(fragment-shader-client-sample PROPERTIES
+   RUNTIME_OUTPUT_DIRECTORY "${FRAGMENT_SHADER_CLIENT_SAMPLE_BIN_DIR}")
+target_link_libraries(fragment-shader-client-sample PRIVATE antler)
+add_custom_command(				    
+   OUTPUT "${FRAGMENT_SHADER_CLIENT_SAMPLE_BIN_DIR}/shaders"
+   COMMAND cp -r "${SAMPLES_DIR}/fragment-shader-client/shaders" "${FRAGMENT_SHADER_CLIENT_SAMPLE_BIN_DIR}"
+   DEPENDS "${SAMPLES_DIR}/fragment-shader-client/shaders"
+   COMMENT "Copying glsl shaders for the fragment shader client sample.")
+add_custom_target(fragment-shader-client-shaders ALL DEPENDS
+   "${FRAGMENT_SHADER_CLIENT_SAMPLE_BIN_DIR}/shaders")
 
 # hello-quad sample
 set(HELLO_QUAD_SAMPLE_DIR "${SAMPLES_DIR}/hello-quad")

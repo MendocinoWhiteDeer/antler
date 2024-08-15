@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "antler.h"
+#include <glslang/Public/resource_limits_c.h>
 
 float atlrClampFloat(const float x, const float min, const float max)
 {
@@ -83,4 +84,82 @@ AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDev
 
   ATLR_ERROR_MSG("No suitable buffer memory type.");
   return 0;
+}
+
+AtlrU8 atlrInitSpirVBinary(AtlrSpirVBinary* restrict bin, glslang_stage_t stage, const char* restrict glsl, const char* restrict name)
+{
+  const glslang_input_t input =
+  {
+    .language = GLSLANG_SOURCE_GLSL,
+    .stage = stage,
+    .client = GLSLANG_CLIENT_VULKAN,
+    .client_version = GLSLANG_TARGET_VULKAN_1_3,
+    .target_language = GLSLANG_TARGET_SPV,
+    .target_language_version = GLSLANG_TARGET_SPV_1_6,
+    .code = glsl,
+    .default_version = 100,
+    .default_profile = GLSLANG_NO_PROFILE,
+    .force_default_version_and_profile = false,
+    .forward_compatible = false,
+    .messages = GLSLANG_MSG_DEFAULT_BIT,
+    .resource = glslang_default_resource(),
+    .callbacks = {},
+    .callbacks_ctx = NULL
+  };
+
+  glslang_shader_t* shader = glslang_shader_create(&input);
+
+  // preprocess
+  if (!glslang_shader_preprocess(shader, &input))
+  {
+    ATLR_ERROR_MSG("glslang_shader_preprocess returned 0.");
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_info_log(shader));
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_info_debug_log(shader));
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", input.code);
+    glslang_shader_delete(shader);
+    return 0;
+  }
+
+  // parse
+  if (!glslang_shader_parse(shader, &input))
+  {
+    ATLR_ERROR_MSG("glslang_shader_parse returned 0.");
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_info_log(shader));
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_info_debug_log(shader));
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_preprocessed_code(shader));
+    glslang_shader_delete(shader);
+    return 0;
+  }
+
+  glslang_program_t* program = glslang_program_create();
+  glslang_program_add_shader(program, shader);
+
+  // link
+  if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
+  {
+    ATLR_ERROR_MSG("glslang_shader_parse returned 0.");
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_info_log(shader));
+    atlrLog(ATLR_LOG_DEBUG, "%s\n", glslang_shader_get_info_debug_log(shader));
+    glslang_program_delete(program);
+    glslang_shader_delete(shader);
+  }
+
+  // generate
+  glslang_program_SPIRV_generate(program, stage);
+  const char* msg = glslang_program_SPIRV_get_messages(program);
+  if (msg) atlrLog(ATLR_LOG_INFO, "Name:%s %s\b", name, msg); 
+
+  bin->codeSize = sizeof(AtlrU32) * glslang_program_SPIRV_get_size(program);
+  bin->code = malloc(bin->codeSize);
+  glslang_program_SPIRV_get(program, bin->code);
+
+  glslang_program_delete(program);
+  glslang_shader_delete(shader);
+
+  return 1;
+}
+
+void atlrDeinitSpirVBinary(AtlrSpirVBinary* restrict bin)
+{
+  free(bin->code);
 }

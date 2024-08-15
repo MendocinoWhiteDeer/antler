@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <glslang/Include/glslang_c_interface.h>
 #include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
 
@@ -28,6 +29,13 @@ typedef int8_t   AtlrI8;
 typedef int16_t  AtlrI16;
 typedef int32_t  AtlrI32;
 typedef int64_t  AtlrI64;
+
+typedef struct _AtlrSpirVBinary
+{
+  AtlrU32* code;
+  size_t codeSize;
+  
+} AtlrSpirVBinary;
 
 typedef enum
 {
@@ -247,6 +255,8 @@ void* atlrAlignedMalloc(const AtlrU64 size, const AtlrU64 alignment);
 void atlrAlignedFree(void* data);
 AtlrU8 atlrAlign(AtlrU64* aligned, const AtlrU64 offset, const AtlrU64 alignment);
 AtlrU8 atlrGetVulkanMemoryTypeIndex(AtlrU32* restrict index, const VkPhysicalDevice physical, const AtlrU32 typeFilter, const VkMemoryPropertyFlags properties);
+AtlrU8 atlrInitSpirVBinary(AtlrSpirVBinary* restrict, glslang_stage_t stage, const char* restrict glsl, const char* restrict name);
+void atlrDeinitSpirVBinary(AtlrSpirVBinary* restrict bin);
 
 // instance.c
 AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict, const char* restrict name);
