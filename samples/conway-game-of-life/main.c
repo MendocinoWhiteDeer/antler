@@ -28,7 +28,6 @@ Games, M. (1970). The fantastic combinations of John Conway’s new solitaire ga
 #include "../../src/antler.h"
 #include "../../src/transforms.h"
 #include <stdio.h>
-#include <time.h>
 
 typedef struct Vertex
 {
@@ -259,20 +258,19 @@ int main()
     return -1;
   }
 
-  clock_t startTime = clock();
-  const double interval = 0.8;
   GLFWwindow* window = instance.data;
+  glfwSetTime(0.0);
+  const double interval = 0.8;
   while(!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
     
-    clock_t currentTime = clock();
-    double elapsedTime = (double)(currentTime - startTime) / CLOCKS_PER_SEC;
+    double elapsedTime = glfwGetTime();
     if (elapsedTime >= interval)
     {
       updateCells(cells, oldCells, rows, columns);
       memcpy(oldCells, cells, rows * columns * sizeof(AtlrU8));
-      startTime = clock();
+      glfwSetTime(0.0);
     }
     
     if (!atlrBeginFrameCommandsHostGLFW(&commandContext))

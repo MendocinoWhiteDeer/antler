@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../../src/antler.h"
 #include "../../src/transforms.h"
 #include "../../src/camera.h"
-#include <time.h>
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -289,16 +288,16 @@ int main()
   const float v0 = M_PI; // initial rotational speed
   float alpha, oldAngle, angle, oldS, s;
 
-  clock_t startTime = clock();
+  GLFWwindow* window = instance.data;
   const double frameTime = 0.016;
   double lag = 0.0;
-  GLFWwindow* window = instance.data;
   while(!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
 
     // update
-    const double dt = (double)(clock() - startTime) / CLOCKS_PER_SEC;
+    const double dt = glfwGetTime();
+    glfwSetTime(0.0);
     for (lag += dt; lag >= frameTime; lag -= frameTime)
     {
       // Relative simulation time t is measured relative to the closest multiple of the period smaller than the real simulation time.
@@ -338,7 +337,6 @@ int main()
       }
       
     }
-    startTime = clock();
 
     // start render frame
     if (!atlrBeginFrameCommandsHostGLFW(&commandContext))

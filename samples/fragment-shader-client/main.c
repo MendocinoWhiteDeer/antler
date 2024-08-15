@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "../../src/antler.h"
 #include <stdio.h>
-#include <time.h>
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -357,8 +356,8 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  const clock_t startTime = clock();
   GLFWwindow* window = instance.data;
+  glfwSetTime(0.0);
   while(!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
@@ -375,8 +374,8 @@ int main(int argc, char* argv[])
       int width, height;
       glfwGetFramebufferSize(window, &width, &height);
       uniformData.resolution[0] = width;
-      uniformData.resolution[1] = height;
-      uniformData.time = (float)(clock() - startTime) / CLOCKS_PER_SEC;
+      uniformData.resolution[1] = height; 
+      uniformData.time = glfwGetTime();
       memcpy(uniformBuffers[commandContext.currentFrame].data, &uniformData, sizeof(uniformData));
     }
     vkCmdBindDescriptorSets(commandBuffer, pipeline.bindPoint, pipeline.layout, 0, 1, descriptorSets + commandContext.currentFrame, 0, NULL);
