@@ -417,6 +417,11 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     vkGetPhysicalDeviceProperties(device->physical, &properties);
     atlrLog(ATLR_LOG_INFO, "With the highest grade of %d, the physical device \"%s\" was selected.",
 	       bestGrade, properties.deviceName);
+
+    VkSampleCountFlags countFlags = properties.limits.framebufferColorSampleCounts & properties.limits.framebufferDepthSampleCounts;
+    if (countFlags & VK_SAMPLE_COUNT_4_BIT)      device->msaaSamples = VK_SAMPLE_COUNT_4_BIT;
+    else if (countFlags & VK_SAMPLE_COUNT_2_BIT) device->msaaSamples = VK_SAMPLE_COUNT_2_BIT;
+    else                                         device->msaaSamples = VK_SAMPLE_COUNT_1_BIT;
   }
 
   AtlrU32 uniqueQueueFamilyIndices[2];
@@ -454,6 +459,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     .flags = 0,
     .queueCreateInfoCount = uniqueQueueFamilyIndicesCount,
     .pQueueCreateInfos = queueInfos,
+    .pEnabledFeatures = NULL
   };
   if (device->hasSwapchainSupport)
   {

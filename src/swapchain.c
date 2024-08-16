@@ -182,7 +182,16 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   }
   swapchain->imageViews = imageViews;
 
-  if (!atlrInitDepthImage(&swapchain->depthImage, extent.width, extent.height, device))
+  const VkImageUsageFlags colorImageUsage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, device->msaaSamples, swapchain->format, VK_IMAGE_TILING_OPTIMAL, colorImageUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		    VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT,
+		    device))
+  {
+    ATLR_ERROR_MSG("atlrInitImage returned 0.");
+    return 0;
+  }
+
+  if (!atlrInitDepthImage(&swapchain->depthImage, extent.width, extent.height, device->msaaSamples, device))
   {
     ATLR_ERROR_MSG("atlrInitDepthImage returned 0.");
     return 0;
@@ -190,9 +199,20 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
 
   if (initRenderPass)
   {
-    const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(&swapchain->depthImage);
-    if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &depthAttachment, device))
+    const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, device->msaaSamples, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    const VkAttachmentDescription colorAttachmentResolve = atlrGetColorAttachmentDescription(swapchain->format, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(&swapchain->depthImage, device->msaaSamples);
+    const VkSubpassDependency dependency =
+    {
+      .srcSubpass = VK_SUBPASS_EXTERNAL,
+      .dstSubpass = 0,
+      .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+      .srcAccessMask = 0,
+      .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+      .dependencyFlags = 0
+    };
+    if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &colorAttachmentResolve, &depthAttachment, 1, &dependency, device))
     {
       ATLR_ERROR_MSG("atlrInitRenderPass returned 0.");
       return 0;
@@ -202,10 +222,11 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   VkFramebuffer* framebuffers = malloc(imageCount * sizeof(VkFramebuffer));
   for (AtlrU32 i = 0; i < imageCount; i++)
   {
-    const VkImageView framebufferAttachments[2] =
+    const VkImageView framebufferAttachments[3] =
     {
+      swapchain->colorImage.imageView,
+      swapchain->depthImage.imageView,
       imageViews[i],
-      swapchain->depthImage.imageView
     };
     const VkFramebufferCreateInfo framebufferInfo =
     {
@@ -213,7 +234,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       .pNext = NULL,
       .flags = 0,
       .renderPass = swapchain->renderPass.renderPass,
-      .attachmentCount = 2,
+      .attachmentCount = 3,
       .pAttachments = framebufferAttachments,
       .width = extent.width,
       .height = extent.height,
@@ -249,6 +270,7 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     atlrDeinitRenderPass(&swapchain->renderPass);
 
   atlrDeinitImage(&swapchain->depthImage);
+  atlrDeinitImage(&swapchain->colorImage);
   
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
     atlrDeinitImageView(swapchain->imageViews[i], device);

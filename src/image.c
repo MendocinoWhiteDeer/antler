@@ -89,7 +89,7 @@ void atlrDeinitImageView(const VkImageView imageView,
 }
 
 AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height,
-		     const AtlrU32 layerCount, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage,
+		     const AtlrU32 layerCount, const VkSampleCountFlagBits samples, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage,
 		     const VkMemoryPropertyFlags properties, const VkImageViewType viewType, const VkImageAspectFlags aspectFlags,
 		     const AtlrDevice* restrict device)
 {
@@ -110,7 +110,7 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
     },
     .mipLevels = 1,
     .arrayLayers = layerCount,
-    .samples = VK_SAMPLE_COUNT_1_BIT,
+    .samples = samples,
     .tiling = tiling,
     .usage = usage,
     .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -182,7 +182,7 @@ AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
   return 0;
 }
 
-AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height,
+AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height, const VkSampleCountFlagBits samples,
 			  const AtlrDevice* restrict device)
 {
   const VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -194,7 +194,7 @@ AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const 
     return 0;
   }
 
-  if (!atlrInitImage(image, width, height, 1, format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+  if (!atlrInitImage(image, width, height, 1, samples, format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		     VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");

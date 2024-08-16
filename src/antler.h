@@ -125,6 +125,7 @@ typedef struct _AtlrDevice
   AtlrQueueFamilyIndices queueFamilyIndices;
   AtlrU8 hasSwapchainSupport;
   AtlrSwapchainSupportDetails swapchainSupportDetails;
+  VkSampleCountFlagBits msaaSamples;
   VkDevice logical;
   VkQueue graphicsComputeQueue;
   VkQueue presentQueue;
@@ -212,6 +213,7 @@ typedef struct _AtlrSwapchain
   AtlrU32 imageCount;
   VkImage* images;
   VkImageView* imageViews;
+  AtlrImage colorImage;
   AtlrImage depthImage;
 
   AtlrRenderPass renderPass;
@@ -330,12 +332,12 @@ VkImageView atlrInitImageView(const VkImage,
 void atlrDeinitImageView(const VkImageView,
 			 const AtlrDevice* restrict);
 AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
-		     const AtlrU32 layerCount, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
+		     const AtlrU32 layerCount,  const VkSampleCountFlagBits, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
 		     const VkMemoryPropertyFlags, const VkImageViewType, const VkImageAspectFlags,
 		     const AtlrDevice* restrict);
 void atlrDeinitImage(const AtlrImage* restrict);
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
-AtlrU8 atlrInitDepthImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
+AtlrU8 atlrInitDepthImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height, const VkSampleCountFlagBits,
 			  const AtlrDevice* restrict);
 void atlrDeinitDepthImage(const AtlrImage* restrict);
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
@@ -366,7 +368,7 @@ VkPipelineVertexInputStateCreateInfo atlrInitVertexInputStateInfo(const AtlrU32 
 VkPipelineInputAssemblyStateCreateInfo atlrInitPipelineInputAssemblyStateInfo();
 VkPipelineViewportStateCreateInfo atlrInitPipelineViewportStateInfo();
 VkPipelineRasterizationStateCreateInfo atlrInitPipelineRasterizationStateInfo();
-VkPipelineMultisampleStateCreateInfo atlrInitPipelineMultisampleStateInfo();
+VkPipelineMultisampleStateCreateInfo atlrInitPipelineMultisampleStateInfo(const VkSampleCountFlagBits);
 VkPipelineDepthStencilStateCreateInfo atlrInitPipelineDepthStencilStateInfo();
 VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentState();
 VkPipelineColorBlendStateCreateInfo atlrInitPipelineColorBlendStateInfo(const VkPipelineColorBlendAttachmentState* restrict);
@@ -393,11 +395,12 @@ AtlrU8 atlrInitComputePipeline(AtlrPipeline* restrict,
 void atlrDeinitPipeline(const AtlrPipeline* restrict);
 
 // render-pass.c
-VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkImageLayout finalLayout);
-VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict);
+VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkSampleCountFlagBits, const VkImageLayout finalLayout);
+VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict, const VkSampleCountFlagBits);
 AtlrU8 atlrInitRenderPass(AtlrRenderPass* restrict,
-			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachment,
+			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments, const VkAttachmentDescription* restrict resolveAttachments,
 			  const VkAttachmentDescription* restrict depthAttachment,
+			  const AtlrU32 dependencyCount, const VkSubpassDependency* restrict dependencies,
 			  const AtlrDevice* restrict);
 void atlrDeinitRenderPass(const AtlrRenderPass* restrict);
 void atlrBeginRenderPass(const AtlrRenderPass* restrict,

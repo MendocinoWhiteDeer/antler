@@ -29,12 +29,12 @@ static const VkClearValue clearDepth =
   .depthStencil = {.depth = 0.0f, .stencil = 0} // for the reverse-z convention, depth should be 0.0f
 };
 
-VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat format, const VkImageLayout finalLayout)
+VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat format, const VkSampleCountFlagBits samples, const VkImageLayout finalLayout)
 {
   return (VkAttachmentDescription)
     {
       .format = format,
-      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .samples = samples,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE, 
       .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -44,7 +44,7 @@ VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat format,
     };
 }
 
-VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict image)
+VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict image, const VkSampleCountFlagBits samples)
 {
   VkFormat format = VK_FORMAT_UNDEFINED;
   if (!atlrIsValidDepthImage(image))
@@ -55,7 +55,7 @@ VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restr
   return (VkAttachmentDescription)
     {
       .format = format,
-      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .samples = samples,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE, 
       .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -66,20 +66,23 @@ VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restr
 }
 
 AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
-			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments,
+			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments, const VkAttachmentDescription* restrict resolveAttachments,
 			  const VkAttachmentDescription* restrict depthAttachment,
+			  const AtlrU32 dependencyCount, const VkSubpassDependency* restrict dependencies,
 			  const AtlrDevice* restrict device)
 {
   renderPass->device = device;
   
   AtlrU32 attachmentCount = colorAttachmentCount;
-  if (depthAttachment)
-    attachmentCount++;
+  if (depthAttachment) attachmentCount++;
+  if (resolveAttachments) attachmentCount += colorAttachmentCount;
 
   VkAttachmentDescription* attachments = malloc(attachmentCount * sizeof(VkAttachmentDescription));
   memcpy(attachments, colorAttachments, colorAttachmentCount * sizeof(VkAttachmentDescription));
   if (depthAttachment)
     memcpy(attachments + colorAttachmentCount, depthAttachment, sizeof(VkAttachmentDescription));
+  if (resolveAttachments)
+    memcpy(attachments + colorAttachmentCount + 1, resolveAttachments, colorAttachmentCount * sizeof(VkAttachmentDescription));
 
   VkAttachmentReference* references = malloc(attachmentCount * sizeof(VkAttachmentReference));
   for (AtlrU32 i = 0; i < colorAttachmentCount; i++)
@@ -93,7 +96,14 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
     {
       .attachment = colorAttachmentCount,
       .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    };	 
+    };
+  if (resolveAttachments)
+    for (AtlrU32 i = 0; i < colorAttachmentCount; i++)
+      references[colorAttachmentCount + 1 + i] = (VkAttachmentReference)
+      {
+	.attachment = colorAttachmentCount + 1 + i,
+	.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+      };
 
   const VkSubpassDescription subpass =
   {
@@ -103,21 +113,10 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
     .pInputAttachments = NULL,
     .colorAttachmentCount = colorAttachmentCount,
     .pColorAttachments = references,
-    .pResolveAttachments = NULL,
+    .pResolveAttachments = references + 1 + colorAttachmentCount,
     .pDepthStencilAttachment = references + colorAttachmentCount,
     .preserveAttachmentCount = 0,
     .pPreserveAttachments = NULL
-  };
-
-  const VkSubpassDependency dependency =
-  {
-    .srcSubpass = VK_SUBPASS_EXTERNAL,
-    .dstSubpass = 0,
-    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-    .srcAccessMask = 0,
-    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-    .dependencyFlags = 0
   };
 
   const VkRenderPassCreateInfo renderPassInfo =
@@ -128,8 +127,8 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
     .pAttachments = attachments,
     .subpassCount = 1,
     .pSubpasses = &subpass,
-    .dependencyCount = 1,
-    .pDependencies = &dependency
+    .dependencyCount = dependencyCount,
+    .pDependencies = dependencies
   };
   if (vkCreateRenderPass(device->logical, &renderPassInfo, device->instance->allocator, &renderPass->renderPass) != VK_SUCCESS)
   {
