@@ -207,7 +207,7 @@ VkPipelineDepthStencilStateCreateInfo atlrInitPipelineDepthStencilStateInfo()
   };
 }
 
-VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentState()
+VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentStateAlpha()
 {
   return (VkPipelineColorBlendAttachmentState)
   {
@@ -217,6 +217,21 @@ VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentState()
     .colorBlendOp = VK_BLEND_OP_ADD,
     .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
     .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+    .alphaBlendOp = VK_BLEND_OP_ADD,
+    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+  }; 
+}
+
+VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentStateAdditive()
+{
+  return (VkPipelineColorBlendAttachmentState)
+  {
+    .blendEnable = VK_TRUE,
+    .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE,
+    .colorBlendOp = VK_BLEND_OP_ADD,
+    .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+    .dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA,
     .alphaBlendOp = VK_BLEND_OP_ADD,
     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
   }; 

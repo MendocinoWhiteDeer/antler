@@ -218,6 +218,9 @@ typedef struct _AtlrSwapchain
 
   AtlrRenderPass renderPass;
   VkFramebuffer* framebuffers;
+
+  AtlrU8 (*onReinit)(void*);
+  void* reinitData;
   
 } AtlrSwapchain;
 
@@ -291,10 +294,12 @@ AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecord
 void atlrCommandSetViewport(const VkCommandBuffer, const float width, const float height);
 void atlrCommandSetScissor(const VkCommandBuffer, const VkExtent2D*);
 AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict, const AtlrU8 frameCount,
-				   AtlrSwapchain* restrict);
+					   AtlrSwapchain* restrict);
 void atlrDeinitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict);
 AtlrU8 atlrBeginFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict);
 AtlrU8 atlrEndFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict);
+AtlrU8 atlrFrameCommandContextBeginRenderPassHostGLFW(AtlrFrameCommandContext* restrict);
+AtlrU8 atlrFrameCommandContextEndRenderPassHostGLFW(AtlrFrameCommandContext* restrict);
 VkCommandBuffer atlrGetFrameCommandContextCommandBufferHostGLFW(const AtlrFrameCommandContext* restrict);
 
 // buffer.c
@@ -326,6 +331,7 @@ void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 void atlrDrawMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 
 // image.c
+VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice, const VkImageTiling);
 VkImageView atlrInitImageView(const VkImage,
 			      const VkImageViewType, const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount,
 			      const AtlrDevice* restrict);
@@ -337,9 +343,6 @@ AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 hei
 		     const AtlrDevice* restrict);
 void atlrDeinitImage(const AtlrImage* restrict);
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
-AtlrU8 atlrInitDepthImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height, const VkSampleCountFlagBits,
-			  const AtlrDevice* restrict);
-void atlrDeinitDepthImage(const AtlrImage* restrict);
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
 				 const AtlrSingleRecordCommandContext* restrict);
 
@@ -370,7 +373,8 @@ VkPipelineViewportStateCreateInfo atlrInitPipelineViewportStateInfo();
 VkPipelineRasterizationStateCreateInfo atlrInitPipelineRasterizationStateInfo();
 VkPipelineMultisampleStateCreateInfo atlrInitPipelineMultisampleStateInfo(const VkSampleCountFlagBits);
 VkPipelineDepthStencilStateCreateInfo atlrInitPipelineDepthStencilStateInfo();
-VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentState();
+VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentStateAlpha();
+VkPipelineColorBlendAttachmentState atlrInitPipelineColorBlendAttachmentStateAdditive();
 VkPipelineColorBlendStateCreateInfo atlrInitPipelineColorBlendStateInfo(const VkPipelineColorBlendAttachmentState* restrict);
 VkPipelineDynamicStateCreateInfo atlrInitPipelineDynamicStateInfo();
 VkPipelineLayoutCreateInfo atlrInitPipelineLayoutInfo(const AtlrU32 setLayoutCount, const VkDescriptorSetLayout* restrict setLayouts,
@@ -396,9 +400,9 @@ void atlrDeinitPipeline(const AtlrPipeline* restrict);
 
 // render-pass.c
 VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat, const VkSampleCountFlagBits, const VkImageLayout finalLayout);
-VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict, const VkSampleCountFlagBits);
+VkAttachmentDescription atlrGetDepthAttachmentDescription(const VkSampleCountFlagBits, const AtlrDevice* restrict, const VkImageLayout finalLayout);
 AtlrU8 atlrInitRenderPass(AtlrRenderPass* restrict,
-			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments, const VkAttachmentDescription* restrict resolveAttachments,
+			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments, const VkAttachmentDescription* restrict resolveAttachments, const VkClearValue* restrict clearColor,
 			  const VkAttachmentDescription* restrict depthAttachment,
 			  const AtlrU32 dependencyCount, const VkSubpassDependency* restrict dependencies,
 			  const AtlrDevice* restrict);
@@ -408,7 +412,7 @@ void atlrBeginRenderPass(const AtlrRenderPass* restrict,
 void atlrEndRenderPass(const VkCommandBuffer);
 
 // swapchain.c
-AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrU8 initRenderPass,
+AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrU8 initRenderPass, AtlrU8 (*onReinit)(void*), void* reinitData, const VkClearValue* restrict clearColor,
 				 const AtlrDevice* restrict);
 void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrU8 deinitRenderPass);
 AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain);

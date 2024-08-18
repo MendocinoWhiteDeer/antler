@@ -27,8 +27,7 @@ static const VkFormat depthFormatChoices[] =
   VK_FORMAT_D24_UNORM_S8_UINT
 };
 
-static VkFormat getSupportedImageFormat(const VkPhysicalDevice physical,
-				   AtlrU32 formatChoiceCount, const VkFormat* restrict formatChoices, VkImageTiling tiling, VkFormatFeatureFlags features)
+static VkFormat getSupportedImageFormat(const VkPhysicalDevice physical, const AtlrU32 formatChoiceCount, const VkFormat* restrict formatChoices, const VkImageTiling tiling, const VkFormatFeatureFlags features)
 {
   for (AtlrU32 i = 0; i < formatChoiceCount; i++)
   {
@@ -42,6 +41,12 @@ static VkFormat getSupportedImageFormat(const VkPhysicalDevice physical,
   }
 
   return VK_FORMAT_UNDEFINED;
+}
+
+VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice physical, const VkImageTiling tiling)
+{
+  const VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  return getSupportedImageFormat(physical, sizeof(depthFormatChoices) / sizeof(VkFormat), depthFormatChoices, tiling, features);
 }
 
 VkImageView atlrInitImageView(const VkImage image,
@@ -174,14 +179,6 @@ void atlrDeinitImage(const AtlrImage* restrict image)
   vkDestroyImage(device->logical, image->image, device->instance->allocator);
 }
 
-AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
-{
-  for (AtlrU32 i = 0; i < sizeof(depthFormatChoices) / sizeof(VkFormat); i++)
-    if (image->format == depthFormatChoices[i])
-      return 1;
-  return 0;
-}
-
 AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height, const VkSampleCountFlagBits samples,
 			  const AtlrDevice* restrict device)
 {
@@ -209,6 +206,14 @@ void atlrDeinitDepthImage(const AtlrImage* restrict image)
   if (!atlrIsValidDepthImage(image))
     ATLR_ERROR_MSG("atlrIsValidDepthImage returned 0.");
   atlrDeinitImage(image);
+}
+
+AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
+{
+  for (AtlrU32 i = 0; i < sizeof(depthFormatChoices) / sizeof(VkFormat); i++)
+    if (image->format == depthFormatChoices[i])
+      return 1;
+  return 0;
 }
 
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout,

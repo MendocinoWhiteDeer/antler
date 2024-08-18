@@ -71,14 +71,19 @@ static VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR* restrict capabilitie
   return extent;
 }
 
-AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8 initRenderPass,
+AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8 initRenderPass, AtlrU8 (*onReinit)(void*), void* reinitData, const VkClearValue* restrict clearColor,
 				 const AtlrDevice* restrict device)
 {
   if (device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
     ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
     return 0;
-  } 
+  }
+
+  swapchain->onReinit = onReinit;
+  swapchain->reinitData = reinitData;
+  VkClearValue clearValue = clearColor ? *clearColor : (VkClearValue){.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
+  
   VkPhysicalDeviceProperties properties;
   vkGetPhysicalDeviceProperties(device->physical, &properties);
   if (!device->queueFamilyIndices.isGraphicsCompute || !device->queueFamilyIndices.isPresent)
@@ -182,18 +187,31 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   }
   swapchain->imageViews = imageViews;
 
-  const VkImageUsageFlags colorImageUsage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, device->msaaSamples, swapchain->format, VK_IMAGE_TILING_OPTIMAL, colorImageUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT,
-		    device))
+  const VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+  const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  const VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+  // color image for multisample anti-aliasing 
+  const VkImageUsageFlags colorUsage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  const VkImageAspectFlags colorAspect =  VK_IMAGE_ASPECT_COLOR_BIT;
+  if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, device->msaaSamples, swapchain->format, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
 
-  if (!atlrInitDepthImage(&swapchain->depthImage, extent.width, extent.height, device->msaaSamples, device))
+  // depth image
+  const VkFormat depthFormat = atlrGetSupportedDepthImageFormat(device->physical, tiling);
+  if (depthFormat == VK_FORMAT_UNDEFINED)
   {
-    ATLR_ERROR_MSG("atlrInitDepthImage returned 0.");
+    ATLR_ERROR_MSG("atlrGetSupportedDepthImageFormat returned VK_FORMAT_UNDEFINED.");
+    return 0;
+  }
+  const VkImageUsageFlags depthUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+  if (!atlrInitImage(&swapchain->depthImage, extent.width, extent.height, 1, device->msaaSamples, depthFormat, tiling, depthUsage, memoryProperties, viewType, depthAspect, device))
+  {
+    ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
 
@@ -201,7 +219,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   {
     const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, device->msaaSamples, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     const VkAttachmentDescription colorAttachmentResolve = atlrGetColorAttachmentDescription(swapchain->format, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(&swapchain->depthImage, device->msaaSamples);
+    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(device->msaaSamples, device, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     const VkSubpassDependency dependency =
     {
       .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -212,7 +230,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
       .dependencyFlags = 0
     };
-    if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &colorAttachmentResolve, &depthAttachment, 1, &dependency, device))
+    if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &colorAttachmentResolve, &clearValue, &depthAttachment, 1, &dependency, device))
     {
       ATLR_ERROR_MSG("atlrInitRenderPass returned 0.");
       return 0;
@@ -283,6 +301,8 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
 AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
 {
   const AtlrDevice* device = swapchain->device;
+  AtlrU8 (*onReinit)(void*) = swapchain->onReinit;
+  void* reinitData = swapchain->reinitData;
   
   if (device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
@@ -303,9 +323,15 @@ AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
   vkDeviceWaitIdle(device->logical);
   
   atlrDeinitSwapchainHostGLFW(swapchain, 0);
-  if (!atlrInitSwapchainHostGLFW(swapchain, 0, device))
+  if (!atlrInitSwapchainHostGLFW(swapchain, 0, onReinit, reinitData, NULL, device))
   {
     ATLR_ERROR_MSG("atlrInitSwapchainHostGLFW returned 0.");
+    return 0;
+  }
+
+  if(onReinit && !onReinit(reinitData))
+  {
+    ATLR_ERROR_MSG("onReinit returned 0.");
     return 0;
   }
 

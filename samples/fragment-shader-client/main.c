@@ -40,17 +40,17 @@ static VkDescriptorSet* descriptorSets;
 static AtlrBuffer indexBuffer;
 static AtlrPipeline pipeline;
 
-const char* vertexShaderSource =
+static const char* vertexShaderSource =
   "#version 460\n"
   "const vec2 positions[4] = vec2[4](vec2(-1.0f,-1.0f), vec2(1.0f,-1.0f), vec2(-1.0f,1.0f), vec2(1.0f,1.0f));\n"
   "void main() { gl_Position = vec4(positions[gl_VertexIndex], 0.0f, 1.0f); }";
 
-const char* fragmentShaderSourceHeader =
+static const char* fragmentShaderSourceHeader =
   "#version 460\n"
   "layout(location = 0) out vec4 outColor;\n"
   "layout(binding = 0, set = 0) uniform AtlrUniform { float time; vec2 resolution; } atlr;\n";
 
-const char* fragmentShaderSourceEntryPoint =
+static const char* fragmentShaderSourceEntryPoint =
   "\nvoid main() { atlrFragment(outColor, gl_FragCoord.xy); }";
 
 static AtlrU8 initDescriptor()
@@ -219,7 +219,7 @@ static AtlrU8 initPipeline(const char* fragmentShaderPath)
   const VkPipelineRasterizationStateCreateInfo rasterizationInfo = atlrInitPipelineRasterizationStateInfo();
   const VkPipelineMultisampleStateCreateInfo multisampleInfo     = atlrInitPipelineMultisampleStateInfo(device.msaaSamples);
   const VkPipelineDepthStencilStateCreateInfo depthStencilInfo   = atlrInitPipelineDepthStencilStateInfo();
-  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentState();
+  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentStateAlpha();
   const VkPipelineColorBlendStateCreateInfo colorBlendInfo       = atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
   const VkPipelineDynamicStateCreateInfo dynamicInfo             = atlrInitPipelineDynamicStateInfo();
 
@@ -280,7 +280,8 @@ static AtlrU8 initFragmentShaderClient(const char* fragmentShaderPath)
     return 0;
   }
 
-  if (!atlrInitSwapchainHostGLFW(&swapchain, 1, &device))
+  const VkClearValue clearColor = {.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
+  if (!atlrInitSwapchainHostGLFW(&swapchain, 1, NULL, NULL, &clearColor, &device))
   {
     ATLR_ERROR_MSG("atlrInitSwapchainHostGLFW returned 0.");
     return 0;
@@ -362,9 +363,16 @@ int main(int argc, char* argv[])
   {
     glfwPollEvents();
     
+    // begin recording
     if (!atlrBeginFrameCommandsHostGLFW(&commandContext))
     {
       ATLR_FATAL_MSG("atlrBeginFrameCommands returned 0.");
+      return -1;
+    }
+    // begin render pass
+    if (!atlrFrameCommandContextBeginRenderPassHostGLFW(&commandContext))
+    {
+      ATLR_FATAL_MSG("atlrFrameCommandContextBeginRenderPassHostGLFW returned 0.");
       return -1;
     }
 
@@ -384,6 +392,13 @@ int main(int argc, char* argv[])
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
     vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
 
+    // end render pass
+    if (!atlrFrameCommandContextEndRenderPassHostGLFW(&commandContext))
+    {
+      ATLR_FATAL_MSG("atlrFrameCommandContextEndRenderPassHostGLFW returned 0.");
+      return -1;
+    }
+    // end recording
     if (!atlrEndFrameCommandsHostGLFW(&commandContext))
     {
       ATLR_FATAL_MSG("atlrEndFrameCommands returned 0.");

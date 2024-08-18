@@ -20,10 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
-static const VkClearValue clearColor =
-{
-  .color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}
-};
 static const VkClearValue clearDepth =
 {
   .depthStencil = {.depth = 0.0f, .stencil = 0} // for the reverse-z convention, depth should be 0.0f
@@ -44,13 +40,12 @@ VkAttachmentDescription atlrGetColorAttachmentDescription(const VkFormat format,
     };
 }
 
-VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restrict image, const VkSampleCountFlagBits samples)
+VkAttachmentDescription atlrGetDepthAttachmentDescription(const VkSampleCountFlagBits samples, const AtlrDevice* device, const VkImageLayout finalLayout)
 {
-  VkFormat format = VK_FORMAT_UNDEFINED;
-  if (!atlrIsValidDepthImage(image))
-    ATLR_ERROR_MSG("atlrIsValidDepthImage returned 0.");
-  else
-    format = image->format;
+  const VkImageTiling dphImgTiling = VK_IMAGE_TILING_OPTIMAL;
+  const VkFormat format = atlrGetSupportedDepthImageFormat(device->physical, dphImgTiling);
+  if (format == VK_FORMAT_UNDEFINED)
+    ATLR_ERROR_MSG("atlrGetSupportedDepthImageFormat returned VK_NULL_HANDLE.");
 
   return (VkAttachmentDescription)
     {
@@ -61,12 +56,12 @@ VkAttachmentDescription atlrGetDepthAttachmentDescription(const AtlrImage* restr
       .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
       .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-      .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+      .finalLayout = finalLayout
     };
 }
 
 AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
-			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments, const VkAttachmentDescription* restrict resolveAttachments,
+			  const AtlrU32 colorAttachmentCount, const VkAttachmentDescription* restrict colorAttachments, const VkAttachmentDescription* restrict resolveAttachments, const VkClearValue* restrict clearColor,
 			  const VkAttachmentDescription* restrict depthAttachment,
 			  const AtlrU32 dependencyCount, const VkSubpassDependency* restrict dependencies,
 			  const AtlrDevice* restrict device)
@@ -113,7 +108,7 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
     .pInputAttachments = NULL,
     .colorAttachmentCount = colorAttachmentCount,
     .pColorAttachments = references,
-    .pResolveAttachments = references + 1 + colorAttachmentCount,
+    .pResolveAttachments = resolveAttachments ? references + 1 + colorAttachmentCount : NULL,
     .pDepthStencilAttachment = references + colorAttachmentCount,
     .preserveAttachmentCount = 0,
     .pPreserveAttachments = NULL
@@ -140,7 +135,7 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* renderPass,
 
   VkClearValue* clearValues = malloc(attachmentCount * sizeof(VkClearValue));
   for (AtlrU32 i = 0; i < colorAttachmentCount; i++)
-    clearValues[i] = clearColor;
+    clearValues[i] = *clearColor;
   if (depthAttachment)
     clearValues[colorAttachmentCount] = clearDepth;
   renderPass->clearValueCount = attachmentCount;

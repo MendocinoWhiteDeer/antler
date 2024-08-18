@@ -212,7 +212,7 @@ void atlrCommandSetScissor(const VkCommandBuffer commandBuffer, const VkExtent2D
 }
 
 AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict commandContext, const AtlrU8 frameCount,
-				   AtlrSwapchain* restrict swapchain)
+					   AtlrSwapchain* restrict swapchain)
 { 
   commandContext->imageIndex = 0;
   commandContext->swapchain = swapchain;
@@ -303,6 +303,7 @@ void atlrDeinitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict com
 AtlrU8 atlrBeginFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandContext)
 {
   const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
+  const VkCommandBuffer commandBuffer = frame->commandBuffer;
   AtlrSwapchain* swapchain = commandContext->swapchain;
   const AtlrDevice* device = swapchain->device;
 
@@ -334,20 +335,13 @@ AtlrU8 atlrBeginFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandC
   }
   
   vkResetFences(device->logical, 1, &frame->inFlightFence);
-
-  const VkCommandBuffer commandBuffer = frame->commandBuffer;
-  const VkExtent2D* extent = &swapchain->extent;
+  
   vkResetCommandBuffer(commandBuffer, 0);
   if (!atlrBeginCommandRecording(commandBuffer, 0))
   {
     ATLR_ERROR_MSG("atlrBeginCommandRecording returned 0.");
     return 0;
   }
-  atlrCommandSetViewport(commandBuffer, extent->width, extent->height);
-  atlrCommandSetScissor(commandBuffer, extent);
-
-  const VkFramebuffer framebuffer = swapchain->framebuffers[commandContext->imageIndex];
-  atlrBeginRenderPass(&swapchain->renderPass, commandBuffer, framebuffer, extent);
 
   return 1;
 }
@@ -355,16 +349,14 @@ AtlrU8 atlrBeginFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandC
 AtlrU8 atlrEndFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandContext)
 {
   const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
-  AtlrSwapchain* swapchain = commandContext->swapchain;
   const VkCommandBuffer commandBuffer = frame->commandBuffer;
+  AtlrSwapchain* swapchain = commandContext->swapchain;
 
   if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
     ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
     return 0;
   } 
-
-  atlrEndRenderPass(commandBuffer);
 
   atlrEndCommandRecording(commandBuffer);
 
@@ -397,6 +389,41 @@ AtlrU8 atlrEndFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandCon
   }
 
   commandContext->currentFrame = (commandContext->currentFrame + 1) % commandContext->frameCount;
+
+  return 1;
+}
+
+AtlrU8 atlrFrameCommandContextBeginRenderPassHostGLFW(AtlrFrameCommandContext* restrict commandContext)
+{
+  const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
+  const VkCommandBuffer commandBuffer = frame->commandBuffer;
+  AtlrSwapchain* swapchain = commandContext->swapchain;
+  const VkExtent2D* extent = &swapchain->extent;
+  const VkFramebuffer framebuffer = swapchain->framebuffers[commandContext->imageIndex];
+  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
+  {
+    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
+    return 0;
+  }
+
+  atlrBeginRenderPass(&swapchain->renderPass, commandBuffer, framebuffer, &swapchain->extent);
+  atlrCommandSetViewport(commandBuffer, extent->width, extent->height);
+  atlrCommandSetScissor(commandBuffer, extent);
+
+  return 1;
+}
+
+AtlrU8 atlrFrameCommandContextEndRenderPassHostGLFW(AtlrFrameCommandContext* restrict commandContext)
+{
+  const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
+  const VkCommandBuffer commandBuffer = frame->commandBuffer;
+  AtlrSwapchain* swapchain = commandContext->swapchain;
+  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
+  {
+    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
+    return 0;
+  }
+  atlrEndRenderPass(commandBuffer);
 
   return 1;
 }

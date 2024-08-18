@@ -68,7 +68,8 @@ If the cell is active it is rendered as white.
 
 **** References
 
-Gardner, M. (1970). MATHEMATICAL GAMES. Scientific American, 223(4), 120–123. http://www.jstor.org/stable/24927642
+Gardner, M. (1970). MATHEMATICAL GAMES.
+Scientific American, 223(4), 120–123. http://www.jstor.org/stable/24927642
 
 *** fragment-shader-client
 
@@ -76,6 +77,18 @@ A client for running frament shaders. You pass in a path to glsl shader code and
 The idea was to make a tiny tool that is a bit similiar to shadertoy, with some provided user inputs.
 
 Further details can be found in the sample documentation.
+
+*** gooch-shading
+
+Gooch shading, a shading model for non-photorealistic rendering.
+This example shows a sphere with a directional light source pointing down the screen.
+In addition to the lighting, the paper mentions placing an outline around the rendered geometry.
+To do this, the program has two render passes; the first corresponds to offscreen scene rendering and the second to edge detection.
+
+**** References
+
+Gooch, Amy, Bruce Gooch, Peter Shirley, and Elaine Cohen. "A non-photorealistic lighting model for automatic technical illustration."
+In Proceedings of the 25th annual conference on Computer graphics and interactive techniques, pp. 447-452. 1998.
 
 *** rotating-cube
 

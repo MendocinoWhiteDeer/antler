@@ -64,7 +64,7 @@ static AtlrU8 initPipeline()
   const VkPipelineRasterizationStateCreateInfo rasterizationInfo = atlrInitPipelineRasterizationStateInfo();
   const VkPipelineMultisampleStateCreateInfo multisampleInfo     = atlrInitPipelineMultisampleStateInfo(device.msaaSamples);
   const VkPipelineDepthStencilStateCreateInfo depthStencilInfo   = atlrInitPipelineDepthStencilStateInfo();
-  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentState();
+  const VkPipelineColorBlendAttachmentState colorBlendAttachment = atlrInitPipelineColorBlendAttachmentStateAlpha();
   const VkPipelineColorBlendStateCreateInfo colorBlendInfo       = atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
   const VkPipelineDynamicStateCreateInfo dynamicInfo             = atlrInitPipelineDynamicStateInfo();
   
@@ -120,7 +120,8 @@ static AtlrU8 initHelloQuad()
     return 0;
   }
 
-  if (!atlrInitSwapchainHostGLFW(&swapchain, 1, &device))
+  const VkClearValue clearColor = {.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
+  if (!atlrInitSwapchainHostGLFW(&swapchain, 1, NULL, NULL, &clearColor, &device))
   {
     ATLR_ERROR_MSG("atlrInitSwapchainHostGLFW returned 0.");
     return 0;
@@ -197,9 +198,16 @@ int main()
   {
     glfwPollEvents();
     
+    // begin recording
     if (!atlrBeginFrameCommandsHostGLFW(&commandContext))
     {
       ATLR_FATAL_MSG("atlrBeginFrameCommands returned 0.");
+      return -1;
+    }
+    // begin render pass
+    if (!atlrFrameCommandContextBeginRenderPassHostGLFW(&commandContext))
+    {
+      ATLR_FATAL_MSG("atlrFrameCommandContextBeginRenderPassHostGLFW returned 0.");
       return -1;
     }
 
@@ -208,6 +216,13 @@ int main()
     atlrBindMesh(&quadMesh, commandBuffer);
     atlrDrawMesh(&quadMesh, commandBuffer);
 
+    // end render pass
+    if (!atlrFrameCommandContextEndRenderPassHostGLFW(&commandContext))
+    {
+      ATLR_FATAL_MSG("atlrFrameCommandContextEndRenderPassHostGLFW returned 0.");
+      return -1;
+    }
+    // end recording
     if (!atlrEndFrameCommandsHostGLFW(&commandContext))
     {
       ATLR_FATAL_MSG("atlrEndFrameCommands returned 0.");
