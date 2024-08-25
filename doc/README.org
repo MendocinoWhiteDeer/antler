@@ -2,7 +2,7 @@
 
 License: LGPL 3.0
 
-A convenience library for Vulkan graphics programming. Not ready for use.
+A personal convenience library for Vulkan graphics programming.
 
 To do a debug build ...
 
@@ -24,7 +24,7 @@ Make sure the working directory is the same as the binary directory when running
 Otherwise, the sample program will have trouble finding the needed resources to run properly.
 The different sample programs are documented in this README file.
 
-** Learning Resources
+* Learning Resources
 
 https://docs.vulkan.org/guide/latest/vulkan_spec.html
 
@@ -38,24 +38,25 @@ https://vkguide.dev
 
 https://vulkan-tutorial.com/
 
-** Dependencies
-*** Submodules
+* Dependencies
+** Submodules
 
 GLFW: https://github.com/glfw/glfw
 
-*** System installation
+** System installation
 
 Vulkan SDK
 
-** Samples
+* Samples
 
-Sample documentation: https://github.com/MendocinoWhiteDeer/antler-sample-documentation
+Some samples are a bit more involved, and they will refer one to the sample documentation:
+https://github.com/MendocinoWhiteDeer/antler-sample-documentation
 
-*** add-vectors
+** add-vectors
 
 After providing a seed, this sample uses a compute shader to add two random vectors of a fixed size.
 
-*** conway-game-of-life
+** conway-game-of-life
 
 The user provides grid dimensions and a seed for the initial random active and dead states of cells in a grid.
 Then the grid evolves according to the rules of John Conway's Game of Life. At each time step,
@@ -66,31 +67,32 @@ Then the grid evolves according to the rules of John Conway's Game of Life. At e
 
 If the cell is active it is rendered as white.
 
-**** References
+*** References
 
 Gardner, M. (1970). MATHEMATICAL GAMES.
 Scientific American, 223(4), 120–123. http://www.jstor.org/stable/24927642
 
-*** fragment-shader-client
+** fragment-shader-client
 
 A client for running frament shaders. You pass in a path to glsl shader code and the client compiles it and displays with it.
 The idea was to make a tiny tool that is a bit similiar to shadertoy, with some provided user inputs.
 
 Further details can be found in the sample documentation.
 
-*** gooch-shading
+** gooch-shading
 
 Gooch shading, a shading model for non-photorealistic rendering.
 This example shows a sphere with a directional light source pointing down the screen.
 In addition to the lighting, the paper mentions placing an outline around the rendered geometry.
 To do this, the program has two render passes; the first corresponds to offscreen scene rendering and the second to edge detection.
 
-**** References
+*** References
 
-Gooch, Amy, Bruce Gooch, Peter Shirley, and Elaine Cohen. "A non-photorealistic lighting model for automatic technical illustration."
-In Proceedings of the 25th annual conference on Computer graphics and interactive techniques, pp. 447-452. 1998.
+Amy Gooch, Bruce Gooch, Peter Shirley, and Elaine Cohen. 1998.
+A non-photorealistic lighting model for automatic technical illustration. In Proceedings of the 25th annual conference on Computer graphics and interactive techniques (SIGGRAPH '98).
+Association for Computing Machinery, New York, NY, USA, 447–452. https://doi.org/10.1145/280814.280950
 
-*** rotating-cube
+** rotating-cube
 
 Simulates a uniform density cube rotating about its center of mass.
 The cube grows and shrinks in size periodically at a fixed mass, producing a torque which changes its rotational velocity.
@@ -100,11 +102,11 @@ The light source is a directional light parallel to the displacement between the
 
 Further details can be found in the sample documentation.
 
-*** hello-quad
+** hello-quad
 
 A basic quad. Unlke hello-triangle, it uses vertex and index buffers.
 
-*** hello-triangle
+** hello-triangle
 
 A basic program to display a colored triangle.
 There are no vertex buffers; the vertex data is hardcoded into the vertex shader.

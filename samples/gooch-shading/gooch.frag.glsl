@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 /*
 Reference:
 
-Gooch, Amy, Bruce Gooch, Peter Shirley, and Elaine Cohen.
-"A non-photorealistic lighting model for automatic technical illustration."
-In Proceedings of the 25th annual conference on Computer graphics and interactive techniques, pp. 447-452. 1998.
+Amy Gooch, Bruce Gooch, Peter Shirley, and Elaine Cohen. 1998.
+A non-photorealistic lighting model for automatic technical illustration. In Proceedings of the 25th annual conference on Computer graphics and interactive techniques (SIGGRAPH '98).
+Association for Computing Machinery, New York, NY, USA, 447–452. https://doi.org/10.1145/280814.280950
 */
 
 #version 460
