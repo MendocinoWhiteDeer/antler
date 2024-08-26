@@ -238,7 +238,7 @@ AtlrU8 atlrStageBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const 
     
   if (!atlrWriteBuffer(&stagingBuffer, 0, size, 0, data))
   {
-    ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+    ATLR_ERROR_MSG("atlrWriteBuffer returned 0.");
     return 0;
   }
 
@@ -271,7 +271,7 @@ AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, con
 
   if (!atlrReadBuffer(&readbackingBuffer, 0, size, 0, data))
   {
-    ATLR_ERROR_MSG("atlrLoadBuffer returned 0.");
+    ATLR_ERROR_MSG("atlrReadBuffer returned 0.");
     return 0;
   }
 

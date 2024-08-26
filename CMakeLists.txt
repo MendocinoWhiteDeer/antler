@@ -39,6 +39,9 @@ add_subdirectory(lib/glfw)
 target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/lib/glfw/include")
 target_link_libraries(antler PUBLIC glfw)
 
+# stb
+target_include_directories(antler PUBLIC "${PROJECT_SOURCE_DIR}/lib/stb")
+
 # Vulkan
 message("Requiring package \'Vulkan\'")
 find_package(Vulkan REQUIRED)

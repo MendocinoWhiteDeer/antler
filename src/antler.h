@@ -337,14 +337,16 @@ VkImageView atlrInitImageView(const VkImage,
 			      const AtlrDevice* restrict);
 void atlrDeinitImageView(const VkImageView,
 			 const AtlrDevice* restrict);
+AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
+				 const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
 		     const AtlrU32 layerCount,  const VkSampleCountFlagBits, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
 		     const VkMemoryPropertyFlags, const VkImageViewType, const VkImageAspectFlags,
 		     const AtlrDevice* restrict);
+AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath,
+				    const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 void atlrDeinitImage(const AtlrImage* restrict);
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
-AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
-				 const AtlrSingleRecordCommandContext* restrict);
 
 // descriptor.c
 VkDescriptorSetLayoutBinding atlrInitDescriptorSetLayoutBinding(const AtlrU32 binding, const VkDescriptorType, const VkShaderStageFlags);

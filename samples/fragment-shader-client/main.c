@@ -27,16 +27,20 @@ static AtlrInstance instance;
 static AtlrDevice device;
 static AtlrSwapchain swapchain;
 static AtlrFrameCommandContext commandContext;
+static AtlrSingleRecordCommandContext singleRecordCommandContext;
 static struct
 {
   float time;            float padding;
   float resolution[2];
   
-} uniformData;
-static AtlrBuffer* uniformBuffers;
+} uniformBufferData;
+static AtlrBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
+static AtlrU8 hasTexture;
+static AtlrImage rgbaImageTexture;
+static VkSampler sampler;
 static AtlrDescriptorSetLayout descriptorSetLayout;
 static AtlrDescriptorPool descriptorPool;
-static VkDescriptorSet* descriptorSets;
+static VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
 static AtlrBuffer indexBuffer;
 static AtlrPipeline pipeline;
 
@@ -45,19 +49,52 @@ static const char* vertexShaderSource =
   "const vec2 positions[4] = vec2[4](vec2(-1.0f,-1.0f), vec2(1.0f,-1.0f), vec2(-1.0f,1.0f), vec2(1.0f,1.0f));\n"
   "void main() { gl_Position = vec4(positions[gl_VertexIndex], 0.0f, 1.0f); }";
 
-static const char* fragmentShaderSourceHeader =
+static const char* fragmentShaderSourceHeaderNoSampler =
   "#version 460\n"
   "layout(location = 0) out vec4 outColor;\n"
-  "layout(binding = 0, set = 0) uniform AtlrUniform { float time; vec2 resolution; } atlr;\n";
+  "layout(binding = 0, set = 0) uniform UniformBufferObject { float time; vec2 resolution; } ubo;\n";
+
+static const char* fragmentShaderSourceHeaderSampler =
+  "#version 460\n"
+  "layout(location = 0) out vec4 outColor;\n"
+  "layout(binding = 0, set = 0) uniform UniformBufferObject { float time; vec2 resolution; } ubo;\n"
+  "layout(binding = 1, set = 0) uniform sampler2D textureSampler;\n";
 
 static const char* fragmentShaderSourceEntryPoint =
   "\nvoid main() { atlrFragment(outColor, gl_FragCoord.xy); }";
 
-static AtlrU8 initDescriptor()
+static AtlrU8 initDescriptor(const char* restrict imageTexturePath)
 {
-  const AtlrU64 size = sizeof(uniformData);
+  // sampler
+  VkSamplerCreateInfo samplerInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+    .pNext = NULL,
+    .flags = 0,
+    .magFilter = VK_FILTER_LINEAR,
+    .minFilter = VK_FILTER_LINEAR,
+    .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+    .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .mipLodBias = 0.0f,
+    .anisotropyEnable = VK_FALSE,
+    .maxAnisotropy = 1.0f,
+    .compareEnable = VK_FALSE,
+    .compareOp = VK_COMPARE_OP_ALWAYS,
+    .minLod =  0.0f,
+    .maxLod = 0.0f,
+    .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+    .unnormalizedCoordinates = VK_FALSE
+  };
+  if (vkCreateSampler(device.logical, &samplerInfo, instance.allocator, &sampler) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkCreateSampler did not return VK_SUCCESS.");
+    return 0;
+  }
+  
+  const AtlrU64 size = sizeof(uniformBufferData);
 
-  uniformBuffers = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(AtlrBuffer));
   const VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
   const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -74,43 +111,77 @@ static AtlrU8 initDescriptor()
     }
   }
 
-  const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-  const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, VK_SHADER_STAGE_FRAGMENT_BIT);
-  if (!atlrInitDescriptorSetLayout(&descriptorSetLayout, 1, &descriptorSetLayoutBinding, &device))
+  if (imageTexturePath)
   {
-    ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
-    return 0;
+    hasTexture = 1;
+    if (!atlrInitImageRgbaTextureFromFile(&rgbaImageTexture, imageTexturePath, &device, &singleRecordCommandContext))
+    {
+      ATLR_ERROR_MSG("atlrInitImageRgbaTextureFromFile returned 0.");
+      return 0;
+    }
+    
+    const VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] =
+    {
+      atlrInitDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT),
+      atlrInitDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+    };
+    if (!atlrInitDescriptorSetLayout(&descriptorSetLayout, 2, descriptorSetLayoutBindings, &device))
+    {
+      ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
+      return 0;
+    }
+
+    const VkDescriptorPoolSize poolSizes[2] =
+    {
+      atlrInitDescriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT),
+      atlrInitDescriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT)
+    };
+    if (!atlrInitDescriptorPool(&descriptorPool, MAX_FRAMES_IN_FLIGHT, 2, poolSizes, &device))
+    {
+      ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
+      return 0;
+    }
+  }
+  else
+  {
+    hasTexture = 0;
+    
+    const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+    if (!atlrInitDescriptorSetLayout(&descriptorSetLayout, 1, &descriptorSetLayoutBinding, &device))
+    {
+      ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
+      return 0;
+    }
+
+    const VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT);
+    if (!atlrInitDescriptorPool(&descriptorPool, MAX_FRAMES_IN_FLIGHT, 1, &poolSize, &device))
+    {
+      ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
+      return 0;
+    }
   }
 
-  const VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, MAX_FRAMES_IN_FLIGHT);
-  if (!atlrInitDescriptorPool(&descriptorPool, MAX_FRAMES_IN_FLIGHT, 1, &poolSize, &device))
-  {
-    ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
-    return 0;
-  }
-
-  descriptorSets = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkDescriptorSet));
-  VkDescriptorSetLayout* setLayouts = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkDescriptorSetLayout));
+  VkDescriptorSetLayout setLayouts[MAX_FRAMES_IN_FLIGHT];
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) setLayouts[i] = descriptorSetLayout.layout;
   if (!atlrAllocDescriptorSets(&descriptorPool, MAX_FRAMES_IN_FLIGHT, setLayouts, descriptorSets))
   {
     ATLR_ERROR_MSG("atlrAllocDescriptorSets returned 0.");
-    free(setLayouts);
     return 0;
   }
-  free(setLayouts);
 
-  VkDescriptorBufferInfo* bufferInfos = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkDescriptorBufferInfo));
-  VkWriteDescriptorSet* descriptorWrites = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkWriteDescriptorSet));
+  VkDescriptorBufferInfo bufferInfos[MAX_FRAMES_IN_FLIGHT];
+  VkDescriptorImageInfo imageInfo;
+  if (hasTexture)
+    imageInfo = atlrInitDescriptorImageInfo(&rgbaImageTexture, sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  VkWriteDescriptorSet descriptorWrites[2 * MAX_FRAMES_IN_FLIGHT];
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
   {
-    bufferInfos[i] = atlrInitDescriptorBufferInfo(uniformBuffers + i, sizeof(uniformData));
-    descriptorWrites[i] = atlrWriteBufferDescriptorSet(descriptorSets[i], 0, type, bufferInfos + i);
+    bufferInfos[i]                               = atlrInitDescriptorBufferInfo(uniformBuffers + i, sizeof(uniformBufferData));
+    descriptorWrites[(1 + hasTexture) * i]       = atlrWriteBufferDescriptorSet(descriptorSets[i], 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bufferInfos + i);
+    if (hasTexture)
+      descriptorWrites[2 * i + 1] = atlrWriteImageDescriptorSet(descriptorSets[i], 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &imageInfo); 
   }
-  vkUpdateDescriptorSets(device.logical, MAX_FRAMES_IN_FLIGHT, descriptorWrites, 0, NULL);
-  free(bufferInfos);
-  free(descriptorWrites);
+  vkUpdateDescriptorSets(device.logical, (1 + hasTexture) * MAX_FRAMES_IN_FLIGHT, descriptorWrites, 0, NULL);
 
   return 1;
 }
@@ -118,15 +189,18 @@ static AtlrU8 initDescriptor()
 static void deinitDescriptor()
 {
   atlrDeinitDescriptorPool(&descriptorPool);
-  free(descriptorSets);
   atlrDeinitDescriptorSetLayout(&descriptorSetLayout);
 
+  if (hasTexture)
+    atlrDeinitImage(&rgbaImageTexture);
+  
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     atlrDeinitBuffer(uniformBuffers + i);
-  free(uniformBuffers);
+
+  vkDestroySampler(device.logical, sampler, instance.allocator);
 }
 
-static AtlrU8 initPipeline(const char* fragmentShaderPath)
+static AtlrU8 initPipeline(const char* restrict fragmentShaderPath)
 {
   // vertex shader module
   atlrLog(ATLR_LOG_DEBUG, "Creating vertex shader module ...");
@@ -174,9 +248,12 @@ static AtlrU8 initPipeline(const char* fragmentShaderPath)
     body[bodySize] = '\0';
     fclose(file);
 
-    const long int glslSize = (bodySize + 1 + strlen(fragmentShaderSourceHeader) + strlen(fragmentShaderSourceEntryPoint)) * sizeof(char);
+    const long int glslSize = (bodySize + 1 + strlen(fragmentShaderSourceHeaderSampler) + strlen(fragmentShaderSourceEntryPoint)) * sizeof(char);
     char* glsl = malloc(glslSize);
-    strcpy(glsl, fragmentShaderSourceHeader);
+    if (hasTexture)
+      strcpy(glsl, fragmentShaderSourceHeaderSampler);
+    else
+      strcpy(glsl, fragmentShaderSourceHeaderNoSampler);
     strcat(glsl, body);
     free(body);
     strcat(glsl, fragmentShaderSourceEntryPoint);
@@ -244,7 +321,7 @@ static void deinitPipeline()
   atlrDeinitPipeline(&pipeline);
 }
   
-static AtlrU8 initFragmentShaderClient(const char* fragmentShaderPath)
+static AtlrU8 initFragmentShaderClient(const char* restrict fragmentShaderPath, const char* restrict imageTexturePath)
 {
   atlrLog(ATLR_LOG_INFO, "Starting 'Fragment Shader Client' demo ...");
 
@@ -293,13 +370,13 @@ static AtlrU8 initFragmentShaderClient(const char* fragmentShaderPath)
     return 0;
   }
 
-  // index buffer
-  AtlrSingleRecordCommandContext singleRecordCommandContext;
+  
   if (!atlrInitSingleRecordCommandContext(&singleRecordCommandContext, device.queueFamilyIndices.graphicsComputeIndex, &device))
   {
     ATLR_ERROR_MSG("atlrInitSingleRecordCommandContext returned 0.");
     return 0;
   }
+
   const AtlrU16 indices[] = {0, 1, 2, 2, 1, 3};
   const AtlrU64 indicesSize = 6 * sizeof(AtlrU16);
   const VkBufferUsageFlags indexUsage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -310,9 +387,8 @@ static AtlrU8 initFragmentShaderClient(const char* fragmentShaderPath)
     ATLR_ERROR_MSG("Failed to init and stage index buffer.");
     return 0;
   }
-  atlrDeinitSingleRecordCommandContext(&singleRecordCommandContext);
 
-  if(!initDescriptor())
+  if(!initDescriptor(imageTexturePath))
   {
     ATLR_ERROR_MSG("initDescriptor returned 0.");
   }
@@ -335,6 +411,7 @@ static void deinitFragmentShaderClient()
   deinitPipeline();
   deinitDescriptor();
   atlrDeinitBuffer(&indexBuffer);
+  atlrDeinitSingleRecordCommandContext(&singleRecordCommandContext);
   atlrDeinitFrameCommandContextHostGLFW(&commandContext);
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);
@@ -345,13 +422,14 @@ static void deinitFragmentShaderClient()
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2)
+  if (argc < 2 || argc > 3)
   {
-    ATLR_FATAL_MSG("Usage: %s <filepath>\n", argv[0]);
+    ATLR_FATAL_MSG("Usage: %s <shader-file-path> <image-texture-path>\n<image-texture-path> is for shaders that use texture uniforms.", argv[0]);
     return -1;
   }
+  char* imageTexturePath = (argc == 2) ? NULL : argv[2];
   
-  if (!initFragmentShaderClient(argv[1]))
+  if (!initFragmentShaderClient(argv[1], imageTexturePath))
   {
     ATLR_FATAL_MSG("initFragmentShaderClient returned 0.");
     return -1;
@@ -378,14 +456,16 @@ int main(int argc, char* argv[])
 
     const VkCommandBuffer commandBuffer = atlrGetFrameCommandContextCommandBufferHostGLFW(&commandContext);
 
+    // update ubo
     {
       int width, height;
       glfwGetFramebufferSize(window, &width, &height);
-      uniformData.resolution[0] = width;
-      uniformData.resolution[1] = height; 
-      uniformData.time = glfwGetTime();
-      memcpy(uniformBuffers[commandContext.currentFrame].data, &uniformData, sizeof(uniformData));
+      uniformBufferData.resolution[0] = width;
+      uniformBufferData.resolution[1] = height; 
+      uniformBufferData.time = glfwGetTime();
+      memcpy(uniformBuffers[commandContext.currentFrame].data, &uniformBufferData, sizeof(uniformBufferData));
     }
+    
     vkCmdBindDescriptorSets(commandBuffer, pipeline.bindPoint, pipeline.layout, 0, 1, descriptorSets + commandContext.currentFrame, 0, NULL);
     
     vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);

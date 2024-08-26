@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 static const VkFormat depthFormatChoices[] =
 {
   VK_FORMAT_D32_SFLOAT,
@@ -50,7 +53,7 @@ VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice physical, const
 }
 
 VkImageView atlrInitImageView(const VkImage image,
-			      const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspectFlags, const AtlrU32 layerCount,
+			      const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspects, const AtlrU32 layerCount,
 			      const AtlrDevice* restrict device)
 {
   const VkImageViewCreateInfo imageViewInfo =
@@ -70,7 +73,7 @@ VkImageView atlrInitImageView(const VkImage image,
     },
     .subresourceRange = (VkImageSubresourceRange)
     {
-      .aspectMask = aspectFlags,
+      .aspectMask = aspects,
       .baseMipLevel = 0,
       .levelCount = 1,
       .baseArrayLayer = 0,
@@ -93,9 +96,70 @@ void atlrDeinitImageView(const VkImageView imageView,
   vkDestroyImageView(device->logical, imageView, device->instance->allocator);
 }
 
+AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout,
+				 const AtlrSingleRecordCommandContext* restrict commandContext)
+{
+  VkCommandBuffer commandBuffer;
+  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
+  {
+    ATLR_ERROR_MSG("atlrBeginSingleRecordCommands returned 0.");
+    return 0;
+  }
+  
+  VkImageMemoryBarrier barrier =
+  {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .pNext = NULL,
+    .oldLayout = oldLayout,
+    .newLayout = newLayout,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = image->image,
+    .subresourceRange = (VkImageSubresourceRange)
+    {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .baseMipLevel = 0,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = image->layerCount
+    }
+  };
+  VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_NONE;
+  VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_NONE;
+  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+  {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  }
+  else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+  {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else
+  {
+    ATLR_ERROR_MSG("Invalid image layout transition.");
+    return 0;
+  }
+
+  vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, NULL, 0, NULL, 1, &barrier);
+
+  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext))
+  {
+    ATLR_ERROR_MSG("atlrEndSingleRecordCommands returned 0.");
+    return 0;
+  }
+
+  return 1;
+}
+
 AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height,
 		     const AtlrU32 layerCount, const VkSampleCountFlagBits samples, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage,
-		     const VkMemoryPropertyFlags properties, const VkImageViewType viewType, const VkImageAspectFlags aspectFlags,
+		     const VkMemoryPropertyFlags properties, const VkImageViewType viewType, const VkImageAspectFlags aspects,
 		     const AtlrDevice* restrict device)
 {
   image->device = device;
@@ -160,13 +224,66 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
     return 0;
   }
 
-  VkImageView imageView = atlrInitImageView(image->image, viewType, format, aspectFlags, layerCount, device);
+  VkImageView imageView = atlrInitImageView(image->image, viewType, format, aspects, layerCount, device);
   if (imageView == VK_NULL_HANDLE)
   {
     ATLR_ERROR_MSG("atlrInitImageView returned VK_NULL_HANDLE.");
     return 0;
   }
   image->imageView = imageView;
+
+  return 1;
+}
+
+AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath,
+				    const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+{
+  int width, height, channels;
+  stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
+  if (!pixels)
+  {
+    ATLR_ERROR_MSG("stbi_load returned NULL.");
+    return 0;
+  }
+
+  const VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+  const VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  if (!atlrInitImage(image, width, height, 1, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL, usage, memoryProperties, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, device))
+  {
+    ATLR_ERROR_MSG("atlrInitImage returned 0.");
+    return 0;
+  }
+
+  const AtlrU64 size = width * height * 4;
+  AtlrBuffer stagingBuffer;
+  if (!atlrInitStagingBuffer(&stagingBuffer, size, device))
+  {
+    ATLR_ERROR_MSG("atlrInitStagingBuffer returned 0.");
+    return 0;
+  }
+
+  if (!atlrWriteBuffer(&stagingBuffer, 0, size, 0, pixels))
+  {
+    ATLR_ERROR_MSG("atlrWriteBuffer returned 0.");
+    return 0;
+  }
+  stbi_image_free(pixels);
+
+  const VkImageLayout initLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+  const VkImageLayout secondLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  const VkImageLayout finalLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  const VkOffset2D offset          = {.x = 0, .y = 0};
+  const VkExtent2D extent          = {.width = width, .height = height};
+  if (!atlrTransitionImageLayout(image, initLayout, secondLayout, commandContext) ||
+      !atlrCopyBufferToImage(&stagingBuffer, image, &offset, &extent, commandContext) ||
+      !atlrTransitionImageLayout(image, secondLayout, finalLayout, commandContext))
+  {
+    ATLR_ERROR_MSG("Failed to stage texture image.");
+    return 0;
+  }
+
+  atlrDeinitBuffer(&stagingBuffer);
 
   return 1;
 }
@@ -179,100 +296,10 @@ void atlrDeinitImage(const AtlrImage* restrict image)
   vkDestroyImage(device->logical, image->image, device->instance->allocator);
 }
 
-AtlrU8 atlrInitDepthImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height, const VkSampleCountFlagBits samples,
-			  const AtlrDevice* restrict device)
-{
-  const VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-  const VkFormatFeatureFlags features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  const VkFormat format = getSupportedImageFormat(device->physical, sizeof(depthFormatChoices) / sizeof(VkFormat), depthFormatChoices, tiling, features);
-  if (format == VK_FORMAT_UNDEFINED)
-  {
-    ATLR_ERROR_MSG("getSupportedImageFormat returned VK_FORMAT_UNDEFINED.");
-    return 0;
-  }
-
-  if (!atlrInitImage(image, width, height, 1, samples, format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		     VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, device))
-  {
-    ATLR_ERROR_MSG("atlrInitImage returned 0.");
-    return 0;
-  }
-
-  return 1;
-}
-
-void atlrDeinitDepthImage(const AtlrImage* restrict image)
-{
-  if (!atlrIsValidDepthImage(image))
-    ATLR_ERROR_MSG("atlrIsValidDepthImage returned 0.");
-  atlrDeinitImage(image);
-}
-
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
 {
   for (AtlrU32 i = 0; i < sizeof(depthFormatChoices) / sizeof(VkFormat); i++)
     if (image->format == depthFormatChoices[i])
       return 1;
   return 0;
-}
-
-AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout,
-				 const AtlrSingleRecordCommandContext* restrict commandContext)
-{
-  VkCommandBuffer commandBuffer;
-  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
-  {
-    ATLR_ERROR_MSG("atlrBeginSingleRecordCommands returned 0.");
-    return 0;
-  }
-  
-  VkImageMemoryBarrier barrier =
-  {
-    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-    .pNext = NULL,
-    .oldLayout = oldLayout,
-    .newLayout = newLayout,
-    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .image = image->image,
-    .subresourceRange = (VkImageSubresourceRange)
-    {
-      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-      .baseMipLevel = 0,
-      .levelCount = 1,
-      .baseArrayLayer = 0,
-      .layerCount = image->layerCount
-    }
-  };
-  VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_NONE;
-  VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_NONE;
-  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-  {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  }
-  else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL)
-  {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  }
-  else
-  {
-    ATLR_ERROR_MSG("Invalid image layout transition.");
-    return 0;
-  }
-
-  vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, NULL, 0, NULL, 1, &barrier);
-
-  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext))
-  {
-    ATLR_ERROR_MSG("atlrEndSingleRecordCommands returned 0.");
-    return 0;
-  }
-
-  return 1;
 }

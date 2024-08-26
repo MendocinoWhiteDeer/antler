@@ -107,9 +107,9 @@ float piriform(vec2 coord, float width, float height)
 
 void atlrFragment(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 uv              = fragCoord.xy / atlr.resolution.xy;
+    vec2 uv              = fragCoord.xy / ubo.resolution.xy;
     uv.y                 = 1.0 - uv.y; 
-    float noise          = fractalNoise(uv - vec2(0.0, atlr.time * DRIFT), FRACTAL_NOISE_INIT_FREQUENCY, FRACTAL_NOISE_OCTAVES, FRACTAL_NOISE_PERSISTENCE);
+    float noise          = fractalNoise(uv - vec2(0.0, ubo.time * DRIFT), FRACTAL_NOISE_INIT_FREQUENCY, FRACTAL_NOISE_OCTAVES, FRACTAL_NOISE_PERSISTENCE);
     float verticalSpread = (2.0 * noise - 1.0) * 1.0 / (1.0 + exp(-uv.y)) * FLAME_VERTICAL_SPREAD; 
     vec2 coord           = vec2(abs(uv.x - 0.5), uv.y * (1.0 + verticalSpread)); 
     float inner          = -piriform(coord, 0.6 * FLAME_WIDTH, 0.5 * FLAME_HEIGHT);
