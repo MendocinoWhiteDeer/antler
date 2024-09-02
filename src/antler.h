@@ -153,6 +153,7 @@ typedef struct _AtlrBuffer
 typedef struct _AtlrMesh
 {
   AtlrBuffer vertexBuffer;
+  AtlrU64 verticesSize;
   AtlrBuffer indexBuffer;
   AtlrU32 indexCount;
   
@@ -292,7 +293,7 @@ void atlrDeinitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restri
 AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecordCommandContext* restrict);
 void atlrCommandSetViewport(const VkCommandBuffer, const float width, const float height);
-void atlrCommandSetScissor(const VkCommandBuffer, const VkExtent2D*);
+void atlrCommandSetScissor(const VkCommandBuffer, const VkOffset2D* restrict, const VkExtent2D* restrict);
 AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict, const AtlrU8 frameCount,
 					   AtlrSwapchain* restrict);
 void atlrDeinitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict);
@@ -313,6 +314,7 @@ AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
 void atlrDeinitBuffer(AtlrBuffer* restrict);
 AtlrU8 atlrMapBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags);
 void atlrUnmapBuffer(const AtlrBuffer* restrict);
+AtlrU8 atlrFlushBuffer(const AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size);
 AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data);
 AtlrU8 atlrReadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data);
 AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,

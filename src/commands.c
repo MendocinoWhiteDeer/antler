@@ -201,11 +201,11 @@ void atlrCommandSetViewport(const VkCommandBuffer commandBuffer, const float wid
   vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 }
 
-void atlrCommandSetScissor(const VkCommandBuffer commandBuffer, const VkExtent2D* extent)
+void atlrCommandSetScissor(const VkCommandBuffer commandBuffer, const VkOffset2D* restrict offset, const VkExtent2D* restrict extent)
 {
   const VkRect2D scissor =
   {
-    .offset = {0, 0},
+    .offset = *offset,
     .extent = *extent
   };
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
@@ -399,6 +399,7 @@ AtlrU8 atlrFrameCommandContextBeginRenderPassHostGLFW(AtlrFrameCommandContext* r
   const VkCommandBuffer commandBuffer = frame->commandBuffer;
   AtlrSwapchain* swapchain = commandContext->swapchain;
   const VkExtent2D* extent = &swapchain->extent;
+  const VkOffset2D offset = (VkOffset2D){.x = 0, .y = 0};
   const VkFramebuffer framebuffer = swapchain->framebuffers[commandContext->imageIndex];
   if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
   {
@@ -408,7 +409,7 @@ AtlrU8 atlrFrameCommandContextBeginRenderPassHostGLFW(AtlrFrameCommandContext* r
 
   atlrBeginRenderPass(&swapchain->renderPass, commandBuffer, framebuffer, &swapchain->extent);
   atlrCommandSetViewport(commandBuffer, extent->width, extent->height);
-  atlrCommandSetScissor(commandBuffer, extent);
+  atlrCommandSetScissor(commandBuffer, &offset, extent);
 
   return 1;
 }

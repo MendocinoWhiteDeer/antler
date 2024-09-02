@@ -126,6 +126,25 @@ void atlrUnmapBuffer(const AtlrBuffer* restrict buffer)
   vkUnmapMemory(buffer->device->logical, buffer->memory);
 }
 
+AtlrU8 atlrFlushBuffer(const AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size)
+{
+  VkMappedMemoryRange memoryRange =
+  {
+    .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+    .pNext = NULL,
+    .memory = buffer->memory,
+    .offset = offset,
+    .size = size,
+  };
+  if (vkFlushMappedMemoryRanges(buffer->device->logical, 1, &memoryRange) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkFlushMappedMemoryRanges did not return VK_SUCCESS.");
+    return 0;
+  }
+
+  return 1;
+}
+
 AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, const void* restrict data)
 {
   if (!atlrMapBuffer(buffer, offset, size, flags))
@@ -283,6 +302,7 @@ AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, con
 AtlrU8 atlrInitMesh(AtlrMesh* restrict mesh, const AtlrU64 verticesSize, const void* restrict vertices, const AtlrU32 indexCount, const AtlrU16* restrict indices,
 		    const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
+  mesh->verticesSize = verticesSize;
   mesh->indexCount = indexCount;
   const AtlrU64 indicesSize = indexCount * sizeof(AtlrU16);
   

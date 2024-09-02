@@ -110,3 +110,9 @@ A basic quad. Unlke hello-triangle, it uses vertex and index buffers.
 
 A basic program to display a colored triangle.
 There are no vertex buffers; the vertex data is hardcoded into the vertex shader.
+
+** transform-cube
+
+Interactively modify the scale, rotation, and translation of a cube.
+Basic diffuse lighting is used to give the cube some dimensionality.
+The light source is a directional light parallel to the displacement between the camera and the cube.

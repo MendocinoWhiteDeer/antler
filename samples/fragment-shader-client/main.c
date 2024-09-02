@@ -195,7 +195,11 @@ static void deinitDescriptor()
     atlrDeinitImage(&rgbaImageTexture);
   
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    atlrDeinitBuffer(uniformBuffers + i);
+  {
+    AtlrBuffer* uniformBuffer = uniformBuffers + i;
+    atlrUnmapBuffer(uniformBuffer);
+    atlrDeinitBuffer(uniformBuffer);
+  }
 
   vkDestroySampler(device.logical, sampler, instance.allocator);
 }

@@ -17,6 +17,9 @@ message("Build type: ${CMAKE_BUILD_TYPE}")
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall -DATLR_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 
+# antler library ###################################################################################
+####################################################################################################
+
 add_library(antler	
   "src/transforms.c"
   "src/logger.c"
@@ -48,6 +51,22 @@ find_package(Vulkan REQUIRED)
 target_include_directories(antler PUBLIC "${Vulkan_INCLUDE_DIRS}")
 target_link_libraries(antler PUBLIC "${Vulkan_LIBRARIES}" glslang SPIRV glslang-default-resource-limits)
 
+# antler imgui library #############################################################################
+####################################################################################################
+
+add_library(antler-imgui
+	"src/antler-imgui.cpp"
+	"lib/imgui/imgui.cpp"
+	"lib/imgui/imgui_draw.cpp"
+	"lib/imgui/imgui_tables.cpp"
+	"lib/imgui/imgui_widgets.cpp"
+	"lib/imgui/backends/imgui_impl_glfw.cpp")
+target_include_directories(antler-imgui PUBLIC "${PROJECT_SOURCE_DIR}/lib/imgui" "${PROJECT_SOURCE_DIR}/lib/imgui/backends")
+target_link_libraries(antler-imgui PUBLIC antler)
+
+# samples ##########################################################################################
+####################################################################################################
+
 # shader compilation
 function (compile_shader input_file output_file)
   add_custom_command(
@@ -57,7 +76,6 @@ function (compile_shader input_file output_file)
     COMMENT "Compiling glsl shader ${ARGV0} to ${ARGV1}")
 endfunction()
 
-# samples
 set(SAMPLES_DIR "${PROJECT_SOURCE_DIR}/samples")
 set(SAMPLES_BIN_DIR "${CMAKE_BINARY_DIR}/samples")
 file(MAKE_DIRECTORY "${SAMPLES_BIN_DIR}")
@@ -181,11 +199,29 @@ set_target_properties(rotating-cube-sample PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${ROTATING_CUBE_SAMPLE_BIN_DIR}")
 target_link_libraries(rotating-cube-sample PRIVATE antler)
 compile_shader(
-  "${ROTATING_CUBE_SAMPLE_DIR}/cube.vert.glsl"
-  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-vert.spv")
+  "${ROTATING_CUBE_SAMPLE_DIR}/diffuse.vert.glsl"
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/diffuse-vert.spv")
 compile_shader(
-  "${ROTATING_CUBE_SAMPLE_DIR}/cube.frag.glsl"
-  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-frag.spv")
+  "${ROTATING_CUBE_SAMPLE_DIR}/diffuse.frag.glsl"
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/diffuse-frag.spv")
 add_custom_target(rotating-cube-shaders ALL DEPENDS
-  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-vert.spv"
-  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/cube-frag.spv")
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/diffuse-vert.spv"
+  "${ROTATING_CUBE_SAMPLE_BIN_DIR}/diffuse-frag.spv")
+
+# transform sample
+set(TRANSFORM_CUBE_SAMPLE_DIR "${SAMPLES_DIR}/transform-cube")
+set(TRANSFORM_CUBE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/transform-cube")
+file(MAKE_DIRECTORY "${TRANSFORM_CUBE_SAMPLE_BIN_DIR}")
+add_executable(transform-cube-sample "${TRANSFORM_CUBE_SAMPLE_DIR}/main.cpp")
+set_target_properties(transform-cube-sample PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${TRANSFORM_CUBE_SAMPLE_BIN_DIR}")
+target_link_libraries(transform-cube-sample PRIVATE antler-imgui)
+compile_shader(
+  "${TRANSFORM_CUBE_SAMPLE_DIR}/diffuse.vert.glsl"
+  "${TRANSFORM_CUBE_SAMPLE_BIN_DIR}/diffuse-vert.spv")
+compile_shader(
+  "${TRANSFORM_CUBE_SAMPLE_DIR}/diffuse.frag.glsl"
+  "${TRANSFORM_CUBE_SAMPLE_BIN_DIR}/diffuse-frag.spv")
+add_custom_target(transform-shaders ALL DEPENDS
+  "${TRANSFORM_CUBE_SAMPLE_BIN_DIR}/diffuse-vert.spv"
+  "${TRANSFORM_CUBE_SAMPLE_BIN_DIR}/diffuse-frag.spv")

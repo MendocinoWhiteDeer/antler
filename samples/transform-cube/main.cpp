@@ -18,10 +18,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   
 */
 
+#include "../../src/cpp-compat.hpp"
+extern "C"
+{ 
 #include "../../src/antler.h"
 #include "../../src/transforms.h"
 #include "../../src/camera.h"
-
+}
+#include "../../lib/imgui/imgui.h"
+#include "../../src/antler-imgui.hpp"
+  
 #define MAX_FRAMES_IN_FLIGHT 2
 
 typedef struct Vertex
@@ -46,6 +52,7 @@ static AtlrFrameCommandContext commandContext;
 static AtlrMesh cubeMesh;
 static AtlrPerspectiveCamera camera;
 static AtlrPipeline pipeline;
+static Atlr::ImguiContext imguiContext;
 
 static AtlrU8 initPipeline()
 {
@@ -85,7 +92,6 @@ static AtlrU8 initPipeline()
     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(WorldTransform)
   };
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(1, &camera.descriptorSetLayout.layout, 1, &pushConstantRange);
-
   if(!atlrInitGraphicsPipeline(&pipeline,
 			       2, stageInfos, &vertexInputInfo, &inputAssemblyInfo, NULL, &viewportInfo, &rasterizationInfo, &multisampleInfo, &depthStencilInfo, &colorBlendInfo, &dynamicInfo, &pipelineLayoutInfo,
 			       &device, &swapchain.renderPass))
@@ -105,11 +111,17 @@ static void deinitPipeline()
   atlrDeinitPipeline(&pipeline);
 }
   
-static AtlrU8 initRotatingCube()
+static AtlrU8 initTransformCube()
 {
-  atlrLog(ATLR_LOG_INFO, "Starting 'Rotating Cube' demo ...");
+  atlrLog(ATLR_LOG_INFO, "Starting 'Transform Cube' demo ...");
 
-  if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Rotating Cube Demo"))
+  if (!glslang_initialize_process())
+  {
+    ATLR_ERROR_MSG("glslang_initialize_process returned 0.");
+    return 0;
+  }
+
+  if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Transform Cube Demo"))
   {
     ATLR_ERROR_MSG("atlrInitHostGLFW returned 0.");
     return 0;
@@ -174,6 +186,7 @@ static AtlrU8 initRotatingCube()
     {{ 0.0f, -1.0f,  0.0f}},
     {{ 0.0f,  1.0f,  0.0f}}
   };
+  
   const Vertex vertices[24] =
   {
     // top face
@@ -253,15 +266,18 @@ static AtlrU8 initRotatingCube()
     return 0;
   }
 
+  imguiContext.init(MAX_FRAMES_IN_FLIGHT, &swapchain, &singleRecordCommandContext);
+
   return 1;
 }
 
-static void deinitRotatingCube()
+static void deinitTransformCube()
 {
-  atlrLog(ATLR_LOG_INFO, "Ending 'Rotating Cube' demo ...");
+  atlrLog(ATLR_LOG_INFO, "Ending 'Transform Cube' demo ...");
 
   vkDeviceWaitIdle(device.logical);
-  
+
+  imguiContext.deinit();
   deinitPipeline();
   atlrDeinitPerspectiveCameraHostGLFW(&camera);
   atlrDeinitMesh(&cubeMesh);
@@ -270,74 +286,32 @@ static void deinitRotatingCube()
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);
   atlrDeinitInstanceHostGLFW(&instance);
+  glslang_finalize_process();
 }
 
 int main()
 {
-  if (!initRotatingCube())
+  if (!initTransformCube())
   {
-    ATLR_FATAL_MSG("initRotatingCube returned 0.");
+    ATLR_FATAL_MSG("initTransformCube returned 0.");
     return -1;
   }
 
-  // parameters for the simulation
-  float t = 0.0f;
-  const float a = 1.0f;
-  const float b = 0.8f;
-  const float period = 10.0; // period of the cube's oscillatory change in side-length
-  const AtlrVec3 axis = {{1.0f, 1.0f, 1.0f}};
-  const float v0 = M_PI; // initial rotational speed
-  float alpha, oldAngle, angle, oldS, s;
+  AtlrVec3 axis = (AtlrVec3){{0.0f, 0.0f, 1.0f}};
+  float angle = 0.0;
+  AtlrNodeTransform node = 
+  {
+      .scale = (AtlrVec3){{1.0f, 1.0f, 1.0f}},
+      .rotate = atlrUnitQuatFromAxisAngle(&axis, angle),
+      .translate = (AtlrVec3){{0.0f, 0.0f, 0.0f}}
+  };
 
-  GLFWwindow* window = instance.data;
+  GLFWwindow* window = (GLFWwindow*)instance.data;
   const double frameTime = 0.016;
   double lag = 0.0;
   while(!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
-
-    // update
-    const double dt = glfwGetTime();
-    glfwSetTime(0.0);
-    for (lag += dt; lag >= frameTime; lag -= frameTime)
-    {
-      // Relative simulation time t is measured relative to the closest multiple of the period smaller than the real simulation time.
-      // The relative angle, called alpha, is updated with this in mind.
-      AtlrU32 n= 0;
-      for (t += frameTime; t >= period; t -= period) n++;
-      if (n) alpha += n * period * v0;
-      if (alpha < 0)
-	while (alpha < 0) alpha += 2 * M_PI;
-      else if (alpha >= 2 * M_PI)
-	while (alpha >= 2 * M_PI) alpha -= 2 * M_PI;
-
-      // Update the side-length
-      oldS = s;
-      s = 1.0f / sqrtf(a + b * sinf((2 * M_PI * t) / period)); 
-      
-      // Update the angle.
-      oldAngle = angle;
-      angle = alpha + (t - (period * b) / (2 * a * M_PI) * cosf((2 * M_PI * t) / period)) * v0;
-
-      // shift the angle of the previous and current update frames in a way that prevents jumps when interpolating.
-      if (angle < 0)
-      {
-	while (angle < 0)
-	{
-	  oldAngle += 2 * M_PI;
-	  angle += 2 * M_PI;
-	}
-      }
-      else if (angle >= 2 * M_PI)
-      {
-	while (angle >= 2 * M_PI)
-	{
-	  oldAngle -= 2 * M_PI;
-	  angle -= 2 * M_PI;
-	}
-      }
-      
-    }
 
     // begin recording
     if (!atlrBeginFrameCommandsHostGLFW(&commandContext))
@@ -356,33 +330,37 @@ int main()
 
     // world transform data
     const float L = lag / frameTime;
-    const AtlrNodeTransform oldNode =
-    {
-      .scale = (AtlrVec3){{oldS, oldS, oldS}},
-      .rotate = atlrUnitQuatFromAxisAngle(&axis, 180 * oldAngle / M_PI),
-      .translate = (AtlrVec3){{0.0f, 0.0f, 0.0f}}
-    };
-    const AtlrNodeTransform node =
-    {
-      .scale = (AtlrVec3){{s, s, s}},
-      .rotate = atlrUnitQuatFromAxisAngle(&axis, 180 * angle / M_PI),
-      .translate = (AtlrVec3){{0.0f, 0.0f, 0.0f}}
-    };
-    const AtlrNodeTransform interpolatedNode = atlrNodeTransformInterpolate(&oldNode, &node, L);
     WorldTransform world;
-    world.transform = atlrMat4FromNodeTransform(&interpolatedNode);
-    world.normalTransform = atlrMat4NormalFromNodeTransform(&interpolatedNode);
+    node.rotate = atlrUnitQuatFromAxisAngle(&axis, angle);
+    world.transform = atlrMat4FromNodeTransform(&node);
+    world.normalTransform = atlrMat4NormalFromNodeTransform(&node);
 
     // update camera
     atlrUpdatePerspectiveCameraHostGLFW(&camera, commandContext.currentFrame);
     // bind camera descriptor set
     vkCmdBindDescriptorSets(commandBuffer, pipeline.bindPoint, pipeline.layout, 0, 1, camera.descriptorSets + commandContext.currentFrame, 0, NULL);
 
-    // draw
+    // draw scene
     vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);
     atlrBindMesh(&cubeMesh, commandBuffer);
     vkCmdPushConstants(commandBuffer, pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(WorldTransform), &world);
     atlrDrawMesh(&cubeMesh, commandBuffer);
+
+    // imgui
+    imguiContext.bind(commandBuffer, commandContext.currentFrame);
+    ImGui::Begin("Transform Widget");
+    ImGui::SliderFloat("scale.x", &node.scale.x, 1.0f, 5.0f, "%.3f", 0);
+    ImGui::SliderFloat("scale.y", &node.scale.y, 1.0f, 5.0f, "%.3f", 0);
+    ImGui::SliderFloat("scale.z", &node.scale.z, 1.0f, 5.0f, "%.3f", 0);
+    ImGui::SliderFloat("rotate-axis.x", &axis.x, 0.0f, 1.0f, "%.3f", 0);
+    ImGui::SliderFloat("rotate-axis.y", &axis.y, 0.0f, 1.0f, "%.3f", 0);
+    ImGui::SliderFloat("rotate-axis.z", &axis.z, 0.0f, 1.0f, "%.3f", 0);
+    ImGui::SliderFloat("rotate-angle", &angle, 0.0f, 360.0f, "%.3f", 0);
+    ImGui::SliderFloat("translate.x", &node.translate.x, -1.0f, 1.0f, "%.3f", 0);
+    ImGui::SliderFloat("translate.y", &node.translate.y, -1.0f, 1.0f, "%.3f", 0);
+    ImGui::SliderFloat("translate.z", &node.translate.z, -1.0f, 1.0f, "%.3f", 0);
+    ImGui::End();
+    imguiContext.draw(commandBuffer, commandContext.currentFrame);
 
     // end render pass
     if (!atlrFrameCommandContextEndRenderPassHostGLFW(&commandContext))
@@ -398,7 +376,7 @@ int main()
     }
   }
 
-  deinitRotatingCube();
+  deinitTransformCube();
 
   return 0;
 }

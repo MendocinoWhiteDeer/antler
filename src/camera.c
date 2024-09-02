@@ -104,7 +104,11 @@ void atlrDeinitPerspectiveCameraHostGLFW(const AtlrPerspectiveCamera* restrict c
   atlrDeinitDescriptorSetLayout(&camera->descriptorSetLayout);
 
   for (AtlrU8 i = 0; i < camera->frameCount; i++)
-    atlrDeinitBuffer(camera->uniformBuffers + i);
+  {
+    AtlrBuffer* uniformBuffer = camera->uniformBuffers + i;
+    atlrUnmapBuffer(uniformBuffer);
+    atlrDeinitBuffer(uniformBuffer);
+  }
   free(camera->uniformBuffers);
 }
 

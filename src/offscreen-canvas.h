@@ -20,7 +20,8 @@ static inline void atlrOffscreenCanvasBeginRenderPass(const AtlrOffscreenCanvas*
   const VkExtent2D* extent = &canvas->extent;
   atlrBeginRenderPass(&canvas->renderPass, commandBuffer, canvas->framebuffer, extent);
   atlrCommandSetViewport(commandBuffer, extent->width, extent->height);
-  atlrCommandSetScissor(commandBuffer, extent);
+  VkOffset2D offset = (VkOffset2D){.x = 0, .y = 0};
+  atlrCommandSetScissor(commandBuffer, &offset, extent);
 }
 static inline void atlrOffscreenCanvasEndRenderPass(const VkCommandBuffer commandBuffer)
 {
