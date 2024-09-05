@@ -69,42 +69,14 @@ void atlrDeinitShaderModule(const VkShaderModule module, const AtlrDevice* restr
   vkDestroyShaderModule(device->logical, module, device->instance->allocator);
 }
 
-VkPipelineShaderStageCreateInfo atlrInitPipelineVertexShaderStageInfo(const VkShaderModule module)
+VkPipelineShaderStageCreateInfo atlrInitPipelineShaderStageInfo(const VkShaderStageFlagBits stage, const VkShaderModule module)
 {
   return (VkPipelineShaderStageCreateInfo)
   {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
     .pNext = NULL,
     .flags = 0,
-    .stage = VK_SHADER_STAGE_VERTEX_BIT,
-    .pName = "main",
-    .module = module,
-    .pSpecializationInfo = NULL
-  };
-}
-
-VkPipelineShaderStageCreateInfo atlrInitPipelineFragmentShaderStageInfo(const VkShaderModule module)
-{
-  return (VkPipelineShaderStageCreateInfo)
-  {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-    .pName = "main",
-    .module = module,
-    .pSpecializationInfo = NULL
-  };
-}
-
-VkPipelineShaderStageCreateInfo atlrInitPipelineComputeShaderStageInfo(const VkShaderModule module)
-{
-  return (VkPipelineShaderStageCreateInfo)
-  {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+    .stage = stage,
     .pName = "main",
     .module = module,
     .pSpecializationInfo = NULL

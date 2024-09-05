@@ -63,8 +63,8 @@ static AtlrU8 initPipeline()
   };
   VkPipelineShaderStageCreateInfo stageInfos[2] =
   {
-    atlrInitPipelineVertexShaderStageInfo(modules[0]),
-    atlrInitPipelineFragmentShaderStageInfo(modules[1])
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT, modules[0]),
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, modules[1])
   };
 
   const VkVertexInputBindingDescription vertexInputBindingDescription =
@@ -114,12 +114,6 @@ static void deinitPipeline()
 static AtlrU8 initTransformCube()
 {
   atlrLog(ATLR_LOG_INFO, "Starting 'Transform Cube' demo ...");
-
-  if (!glslang_initialize_process())
-  {
-    ATLR_ERROR_MSG("glslang_initialize_process returned 0.");
-    return 0;
-  }
 
   if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Transform Cube Demo"))
   {
@@ -286,7 +280,6 @@ static void deinitTransformCube()
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);
   atlrDeinitInstanceHostGLFW(&instance);
-  glslang_finalize_process();
 }
 
 int main()
@@ -307,8 +300,6 @@ int main()
   };
 
   GLFWwindow* window = (GLFWwindow*)instance.data;
-  const double frameTime = 0.016;
-  double lag = 0.0;
   while(!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
@@ -329,7 +320,6 @@ int main()
     const VkCommandBuffer commandBuffer = atlrGetFrameCommandContextCommandBufferHostGLFW(&commandContext);
 
     // world transform data
-    const float L = lag / frameTime;
     WorldTransform world;
     node.rotate = atlrUnitQuatFromAxisAngle(&axis, angle);
     world.transform = atlrMat4FromNodeTransform(&node);

@@ -194,6 +194,12 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
   atlrLog(ATLR_LOG_INFO, "Initializing Antler instance in host headless mode ...");
   instance->mode = ATLR_MODE_HOST_HEADLESS;
 
+  if (!glslang_initialize_process())
+  {
+    ATLR_ERROR_MSG("glslang_initialize_process returned 0.");
+    return 0;
+  }
+
   VkInstanceCreateInfo instanceInfo = {};
   instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   
@@ -275,6 +281,8 @@ void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict instance)
   deinitDebugMessenger(instance);
 #endif
   vkDestroyInstance(instance->instance, instance->allocator);
+
+  glslang_finalize_process();
    
   atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }
@@ -287,6 +295,12 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
   }
   atlrLog(ATLR_LOG_INFO, "Initializing Antler instance in GLFW mode ...");
   instance->mode = ATLR_MODE_HOST_GLFW;
+
+  if (!glslang_initialize_process())
+  {
+    ATLR_ERROR_MSG("glslang_initialize_process returned 0.");
+    return 0;
+  }
   
   if (!glfwInit())
   {
@@ -393,6 +407,8 @@ void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict instance)
   GLFWwindow* window = instance->data;
   glfwDestroyWindow(window);
   glfwTerminate();
+
+  glslang_finalize_process();
    
   atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }

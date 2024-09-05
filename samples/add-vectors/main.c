@@ -110,7 +110,7 @@ static void deinitDescriptor()
 static AtlrU8 initPipeline()
 {
   VkShaderModule module = atlrInitShaderModule("add-comp.spv", &device);
-  VkPipelineShaderStageCreateInfo stageInfo =  atlrInitPipelineComputeShaderStageInfo(module);
+  VkPipelineShaderStageCreateInfo stageInfo = atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, module);
 
   const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(1, &descriptorSetLayout.layout, 0, NULL);
 

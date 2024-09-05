@@ -44,8 +44,8 @@ static AtlrU8 initPipeline()
   };
   VkPipelineShaderStageCreateInfo stageInfos[2] =
   {
-    atlrInitPipelineVertexShaderStageInfo(modules[0]),
-    atlrInitPipelineFragmentShaderStageInfo(modules[1])
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT, modules[0]),
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, modules[1])
   };
 
   const VkVertexInputBindingDescription vertexInputBindingDescription =

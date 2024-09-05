@@ -223,8 +223,8 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
   
   VkPipelineShaderStageCreateInfo stageInfos[2] =
   {
-    atlrInitPipelineVertexShaderStageInfo(vertexModule),
-    atlrInitPipelineFragmentShaderStageInfo(fragmentModule)
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT, vertexModule),
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentModule)
   };
 
   const VkVertexInputBindingDescription vertexInputBindingDescription =

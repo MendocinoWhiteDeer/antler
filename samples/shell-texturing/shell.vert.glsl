@@ -22,19 +22,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inUv;
 
 layout(location = 0) out vec3 outNormal;
+layout(location = 1) out vec2 outUv;
 
-layout(binding = 0) uniform Camera
+layout(push_constant) uniform World
 {
-	vec4 eyePos;
-	mat4 view;
-	mat4 perspective;
-
-} camera;
+	mat4 transform;
+	mat4 normalTransform;
+	
+} world;
 
 void main()
 {
-	outNormal = normalize(inNormal);
-	gl_Position = camera.perspective * camera.view * vec4(inPos, 1.0f);
+	outNormal = normalize(mat3(world.normalTransform) * inNormal);
+	outUv = inUv; 
+	gl_Position = world.transform * vec4(inPos, 1.0f);
 }

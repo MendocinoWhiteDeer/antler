@@ -43,7 +43,7 @@ layout(push_constant) uniform World
 
 void main()
 {
-	outNormal = mat3(world.normalTransform) * inNormal;
+	outNormal = normalize(mat3(world.normalTransform) * inNormal);
 	vec4 worldPos = world.transform * vec4(inPos, 1.0f);
 	outLightDir = normalize(vec3(worldPos - camera.eyePos));
 	gl_Position = camera.perspective * camera.view * worldPos;

@@ -97,6 +97,11 @@ typedef enum
   // swapchain criterion
   ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT,
 
+  // geometry shader feature
+  // If the method is a nonegative point shift or a required method, the geometry shader device feature is enabled when possible.
+  // Otherwise, the geometry shader device feature is disabled.
+  ATLR_DEVICE_CRITERION_GEOMETRY_SHADER,
+
   ATLR_DEVICE_CRITERION_TOT
   
 } AtlrDeviceCriterionType;
@@ -368,9 +373,7 @@ VkWriteDescriptorSet atlrWriteImageDescriptorSet(const VkDescriptorSet, const At
 // pipeline.c
 VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice* restrict);
 void atlrDeinitShaderModule(const VkShaderModule module, const AtlrDevice* restrict);
-VkPipelineShaderStageCreateInfo atlrInitPipelineVertexShaderStageInfo(const VkShaderModule);
-VkPipelineShaderStageCreateInfo atlrInitPipelineFragmentShaderStageInfo(const VkShaderModule);
-VkPipelineShaderStageCreateInfo atlrInitPipelineComputeShaderStageInfo(const VkShaderModule);
+VkPipelineShaderStageCreateInfo atlrInitPipelineShaderStageInfo(const VkShaderStageFlagBits, const VkShaderModule);
 VkPipelineVertexInputStateCreateInfo atlrInitVertexInputStateInfo(const AtlrU32 bindingCount, const VkVertexInputBindingDescription* restrict, const AtlrU32 attributeCount, const VkVertexInputAttributeDescription* restrict);
 VkPipelineInputAssemblyStateCreateInfo atlrInitPipelineInputAssemblyStateInfo();
 VkPipelineViewportStateCreateInfo atlrInitPipelineViewportStateInfo();

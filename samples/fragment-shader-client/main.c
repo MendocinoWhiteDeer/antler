@@ -290,8 +290,8 @@ static AtlrU8 initPipeline(const char* restrict fragmentShaderPath)
   VkShaderModule modules[2] = { vertexModule, fragmentModule };
   VkPipelineShaderStageCreateInfo stageInfos[2] =
   {
-    atlrInitPipelineVertexShaderStageInfo(modules[0]),
-    atlrInitPipelineFragmentShaderStageInfo(modules[1])
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT, modules[0]),
+    atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, modules[1])
   };
 
   const VkPipelineVertexInputStateCreateInfo vertexInputInfo     = atlrInitVertexInputStateInfo(0, NULL, 0, NULL);
@@ -328,12 +328,6 @@ static void deinitPipeline()
 static AtlrU8 initFragmentShaderClient(const char* restrict fragmentShaderPath, const char* restrict imageTexturePath)
 {
   atlrLog(ATLR_LOG_INFO, "Starting 'Fragment Shader Client' demo ...");
-
-  if (!glslang_initialize_process())
-  {
-    ATLR_ERROR_MSG("glslang_initialize_process returned 0.");
-    return 0;
-  }
 
   if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Fragment Shader Client"))
   {
@@ -395,6 +389,7 @@ static AtlrU8 initFragmentShaderClient(const char* restrict fragmentShaderPath, 
   if(!initDescriptor(imageTexturePath))
   {
     ATLR_ERROR_MSG("initDescriptor returned 0.");
+    return 0;
   }
 
   if (!initPipeline(fragmentShaderPath))
@@ -420,7 +415,6 @@ static void deinitFragmentShaderClient()
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);
   atlrDeinitInstanceHostGLFW(&instance);
-  glslang_finalize_process();
 }
 
 

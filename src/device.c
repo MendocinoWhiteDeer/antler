@@ -36,7 +36,9 @@ static const char* deviceCriterionNames[ATLR_DEVICE_CRITERION_TOT] =
   "QUEUE FAMILY PRESENT SUPPORT",
   "QUEUE FAMILY COMPUTE SUPPORT",
 
-  "SWAPCHAIN SUPPORT"
+  "SWAPCHAIN SUPPORT",
+
+  "GEOMETRY SHADER"
 };
 
 // if graphics is supported Vulkan demands at least one family supporting both graphics and compute 
@@ -306,6 +308,10 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
         case ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT:
 	  criterionValues[j] = hasSwapchainSupport;
 	  break;
+
+        case ATLR_DEVICE_CRITERION_GEOMETRY_SHADER:
+	  criterionValues[j] = features.geometryShader;
+	  break;
       }
     }
 
@@ -411,13 +417,32 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     ATLR_ERROR_MSG("An appropriate physical device was never found.");
     return 0;
   }
-
+  
+  // set device info
+  VkPhysicalDeviceFeatures deviceFeatures = {};
   {
     VkPhysicalDeviceProperties properties;
+    VkPhysicalDeviceFeatures features;
     vkGetPhysicalDeviceProperties(device->physical, &properties);
+    vkGetPhysicalDeviceFeatures(device->physical, &features);
+    
     atlrLog(ATLR_LOG_INFO, "With the highest grade of %d, the physical device \"%s\" was selected.",
 	       bestGrade, properties.deviceName);
-
+    
+    AtlrDeviceCriterion geometryShaderCriterion = criteria[ATLR_DEVICE_CRITERION_GEOMETRY_SHADER];
+    switch (geometryShaderCriterion.method)
+    {
+      case ATLR_DEVICE_CRITERION_METHOD_POINT_SHIFT:
+	deviceFeatures.geometryShader = (geometryShaderCriterion.pointShift >= 0 && features.geometryShader) ? VK_TRUE : VK_FALSE;
+	break;
+      case ATLR_DEVICE_CRITERION_METHOD_REQUIRED:
+	deviceFeatures.geometryShader = VK_TRUE;
+	break;
+      case ATLR_DEVICE_CRITERION_METHOD_FORBIDDEN:
+	deviceFeatures.geometryShader = VK_FALSE;
+	break;
+    }
+    
     VkSampleCountFlags countFlags = properties.limits.framebufferColorSampleCounts & properties.limits.framebufferDepthSampleCounts;
     if (countFlags & VK_SAMPLE_COUNT_4_BIT)      device->msaaSamples = VK_SAMPLE_COUNT_4_BIT;
     else if (countFlags & VK_SAMPLE_COUNT_2_BIT) device->msaaSamples = VK_SAMPLE_COUNT_2_BIT;
@@ -459,7 +484,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     .flags = 0,
     .queueCreateInfoCount = uniqueQueueFamilyIndicesCount,
     .pQueueCreateInfos = queueInfos,
-    .pEnabledFeatures = NULL
+    .pEnabledFeatures = &deviceFeatures
   };
   if (device->hasSwapchainSupport)
   {

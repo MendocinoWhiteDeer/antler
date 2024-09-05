@@ -116,7 +116,7 @@ static AtlrU8 initDescriptor()
     return 0;
   }
 
-  VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT);
+  VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, MAX_FRAMES_IN_FLIGHT);
   VkDescriptorPoolSize poolSizes[2]; poolSizes[0] = poolSize; poolSizes[1] = poolSize;
   if (!atlrInitDescriptorPool(&descriptorPool, MAX_FRAMES_IN_FLIGHT, 2, poolSizes, &device))
   {
@@ -172,7 +172,7 @@ static AtlrU8 initPipelines()
   // gooch lighting pipeline 
   {
     const VkShaderModule modules[2]                     = { atlrInitShaderModule("gooch-vert.spv", &device), atlrInitShaderModule("gooch-frag.spv", &device) };
-    const VkPipelineShaderStageCreateInfo stageInfos[2] = { atlrInitPipelineVertexShaderStageInfo(modules[0]), atlrInitPipelineFragmentShaderStageInfo(modules[1]) };
+    const VkPipelineShaderStageCreateInfo stageInfos[2] = { atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT, modules[0]), atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, modules[1]) };
 
     const VkVertexInputBindingDescription vertexInputBindingDescription =
     {
@@ -202,7 +202,7 @@ static AtlrU8 initPipelines()
   // edge detection pipeline
   {
     const VkShaderModule modules[2]                     = { atlrInitShaderModule("edge-vert.spv", &device), atlrInitShaderModule("edge-frag.spv", &device) };
-    const VkPipelineShaderStageCreateInfo stageInfos[2] = { atlrInitPipelineVertexShaderStageInfo(modules[0]), atlrInitPipelineFragmentShaderStageInfo(modules[1]) };
+    const VkPipelineShaderStageCreateInfo stageInfos[2] = { atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT, modules[0]), atlrInitPipelineShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, modules[1]) };
     
     const VkPipelineVertexInputStateCreateInfo vertexInputInfo = atlrInitVertexInputStateInfo(0, NULL, 0, NULL);
 
@@ -232,12 +232,6 @@ static void deinitPipelines()
 static AtlrU8 initGooch()
 {
   atlrLog(ATLR_LOG_INFO, "Starting 'Gooch' demo ...");
-
-  if (!glslang_initialize_process())
-  {
-    ATLR_ERROR_MSG("glslang_initialize_process returned 0.");
-    return 0;
-  }
 
   if (!atlrInitInstanceHostGLFW(&instance, 800, 400, "Gooch Demo"))
   {
@@ -415,7 +409,6 @@ static void deinitGooch()
   atlrDeinitSwapchainHostGLFW(&swapchain, 1);
   atlrDeinitDeviceHost(&device);
   atlrDeinitInstanceHostGLFW(&instance);
-  glslang_finalize_process();
 }
 
 int main()

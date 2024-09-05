@@ -45,8 +45,9 @@ AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict camera,
   }
 
   const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  const VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-  const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, VK_SHADER_STAGE_VERTEX_BIT);
+    const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, stages);
   if (!atlrInitDescriptorSetLayout(&camera->descriptorSetLayout, 1, &descriptorSetLayoutBinding, device))
   {
     ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
