@@ -92,6 +92,15 @@ Amy Gooch, Bruce Gooch, Peter Shirley, and Elaine Cohen. 1998.
 A non-photorealistic lighting model for automatic technical illustration. In Proceedings of the 25th annual conference on Computer graphics and interactive techniques (SIGGRAPH '98).
 Association for Computing Machinery, New York, NY, USA, 447–452. https://doi.org/10.1145/280814.280950
 
+** hello-quad
+
+A basic quad. Unlke hello-triangle, it uses vertex and index buffers.
+
+** hello-triangle
+
+A basic program to display a colored triangle.
+There are no vertex buffers; the vertex data is hardcoded into the vertex shader.
+
 ** rotating-cube
 
 Simulates a uniform density cube rotating about its center of mass.
@@ -102,14 +111,11 @@ The light source is a directional light parallel to the displacement between the
 
 Further details can be found in the sample documentation.
 
-** hello-quad
+** shell-texturing
 
-A basic quad. Unlke hello-triangle, it uses vertex and index buffers.
-
-** hello-triangle
-
-A basic program to display a colored triangle.
-There are no vertex buffers; the vertex data is hardcoded into the vertex shader.
+The geometry shader extrudes a mesh out into various shells.
+The fragment shader can produces different effects like simulating grass or fur without drawing an obscene amount of triangles.
+Currently the sample only includes grass, but I'd like to add a hair ball at some point.
 
 ** transform-cube
 
