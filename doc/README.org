@@ -75,7 +75,7 @@ Scientific American, 223(4), 120–123. http://www.jstor.org/stable/24927642
 ** fragment-shader-client
 
 A client for running frament shaders. You pass in a path to glsl shader code and the client compiles it and displays with it.
-The idea was to make a tiny tool that is a bit similiar to shadertoy, with some provided user inputs.
+The idea was to make a tiny tool that is a bit similar to shadertoy, with some provided user inputs.
 
 Further details can be found in the sample documentation.
 
@@ -103,7 +103,7 @@ There are no vertex buffers; the vertex data is hardcoded into the vertex shader
 
 ** rotating-cube
 
-Simulates a uniform density cube rotating about its center of mass.
+This sample simulates a uniform density cube rotating about its center of mass.
 The cube grows and shrinks in size periodically at a fixed mass, producing a torque which changes its rotational velocity.
 Updates occur with a fixed time step, then we interpolate between update frames for each render frame.
 Basic diffuse lighting is used to give the cube some dimensionality.
@@ -114,11 +114,11 @@ Further details can be found in the sample documentation.
 ** shell-texturing
 
 The geometry shader extrudes a mesh out into various shells.
-The fragment shader can produces different effects like simulating grass or fur without drawing an obscene amount of triangles.
+With shell texturing, one can produce different effects, such as simulating grass or fur without drawing an obscene amount of triangles.
 Currently the sample only includes grass, but I'd like to add a hair ball at some point.
 
 ** transform-cube
 
-Interactively modify the scale, rotation, and translation of a cube.
+This sample allows you to interactively modify the scale, rotation, and translation of a cube.
 Basic diffuse lighting is used to give the cube some dimensionality.
 The light source is a directional light parallel to the displacement between the camera and the cube.
