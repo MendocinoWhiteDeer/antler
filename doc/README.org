@@ -1,5 +1,11 @@
 * antler
 
+To clone ...
+
+#+BEGIN_SRC shell
+git clone --recursive https://github.com/MendocinoWhiteDeer/antler
+#+END_SRC
+
 License: LGPL 3.0
 
 A personal convenience library for Vulkan graphics programming.
@@ -42,6 +48,8 @@ https://vulkan-tutorial.com/
 ** Submodules
 
 GLFW: https://github.com/glfw/glfw
+imgui: https://github.com/ocornut/imgui
+stb: https://github.com/nothings/stb
 
 ** System installation
 
