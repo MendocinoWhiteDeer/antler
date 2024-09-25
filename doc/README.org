@@ -26,6 +26,11 @@ cd release-build
 make
 #+END_SRC
 
+There are additonal cmake options for the different build modes:
+headless (-DATLR_BUILD_HOST_HEADLESS), glfw (-DATLR_BUILD_HOST_GLFW), and hook (-DATLR_BUILD_HOOK).
+The headless and glfw are host modes which let you choose between a headless program and one which uses glfw to display things.
+The hook mode is more barebones, and it supposed to be used for developing Vulkan layers that hook into existing applications.
+
 Make sure the working directory is the same as the binary directory when running samples.
 Otherwise, the sample program will have trouble finding the needed resources to run properly.
 The different sample programs are documented in this README file.

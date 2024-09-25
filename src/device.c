@@ -20,27 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
-static const char* deviceCriterionNames[ATLR_DEVICE_CRITERION_TOT] =
-{
-  "AT LEAST VULKAN VERSION 1.1",
-  "AT LEAST VULKAN VERSION 1.2",
-  "AT LEAST VULKAN VERSION 1.3",
-  
-  "OTHER PHYSICAL DEVICE",
-  "INTEGRATED GPU PHYSICAL DEVICE",
-  "DISCRETE GPU PHYSICAL DEVICE",
-  "VIRTUAL GPU PHYSICAL DEVICE",
-  "CPU PHYSICAL DEVICE",
-
-  "QUEUE FAMILY GRAPHICS SUPPORT",
-  "QUEUE FAMILY PRESENT SUPPORT",
-  "QUEUE FAMILY COMPUTE SUPPORT",
-
-  "SWAPCHAIN SUPPORT",
-
-  "GEOMETRY SHADER"
-};
-
 // if graphics is supported Vulkan demands at least one family supporting both graphics and compute 
 // find queue families supporting graphics/compute and present; prioritize any family with both
 static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, const AtlrInstance* restrict instance, const VkPhysicalDevice physical)
@@ -79,44 +58,6 @@ static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, con
   }
 
   free(properties);
-}
-
-static AtlrU8 arePhysicalDeviceExtensionsAvailable(const VkPhysicalDevice physical, const char** restrict extensions, AtlrU32 extensionCount)
-{
-  AtlrU32 availableExtensionCount = 0;
-  if (vkEnumerateDeviceExtensionProperties(physical, NULL, &availableExtensionCount, NULL) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkEnumerateDeviceExtensionProperties (first call) did not return VK_SUCCESS.");
-    return 0;
-  }
-  VkExtensionProperties* availableExtensions = malloc(availableExtensionCount * sizeof(VkExtensionProperties));
-  if (vkEnumerateDeviceExtensionProperties(physical, NULL, &availableExtensionCount, availableExtensions) != VK_SUCCESS)
-  {
-    ATLR_ERROR_MSG("vkEnumerateDeviceExtensionProperties (second call) did not return VK_SUCCESS.");
-    free(availableExtensions);
-    return 0;
-  }
-   
-  AtlrU8 extensionsFound = 1;
-  for (AtlrU32 i = 0; i < extensionCount; i++)
-  {
-    AtlrU8 found = 0;
-    for (AtlrU32 j = 0; j < availableExtensionCount; j++)
-      if (!strcmp(extensions[i], availableExtensions[j].extensionName))
-	{
-	  found = 1;
-	  atlrLog(ATLR_LOG_DEBUG, "Vulkan device extension \"%s\" is available.", extensions[i]);
-	  break;
-	}
-    if (!found)
-      {
-	atlrLog(ATLR_LOG_DEBUG, "Vulkan device extension \"%s\" is unavailable.", extensions[i]);
-	extensionsFound = 0;
-      }
-  }
-
-  free(availableExtensions);
-  return extensionsFound;
 }
 
 AtlrU8 atlrInitSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict support, const AtlrInstance* restrict instance, const VkPhysicalDevice physical)
@@ -166,6 +107,66 @@ void atlrDeinitSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict sup
   free(support->presentModes);
 }
 
+#if defined(ATLR_BUILD_HOST_HEADLESS) || defined(ATLR_BUILD_HOST_GLFW)
+static const char* deviceCriterionNames[ATLR_DEVICE_CRITERION_TOT] =
+{
+  "AT LEAST VULKAN VERSION 1.1",
+  "AT LEAST VULKAN VERSION 1.2",
+  "AT LEAST VULKAN VERSION 1.3",
+  
+  "OTHER PHYSICAL DEVICE",
+  "INTEGRATED GPU PHYSICAL DEVICE",
+  "DISCRETE GPU PHYSICAL DEVICE",
+  "VIRTUAL GPU PHYSICAL DEVICE",
+  "CPU PHYSICAL DEVICE",
+
+  "QUEUE FAMILY GRAPHICS SUPPORT",
+  "QUEUE FAMILY PRESENT SUPPORT",
+  "QUEUE FAMILY COMPUTE SUPPORT",
+
+  "SWAPCHAIN SUPPORT",
+
+  "GEOMETRY SHADER"
+};
+
+static AtlrU8 arePhysicalDeviceExtensionsAvailable(const VkPhysicalDevice physical, const char** restrict extensions, AtlrU32 extensionCount)
+{
+  AtlrU32 availableExtensionCount = 0;
+  if (vkEnumerateDeviceExtensionProperties(physical, NULL, &availableExtensionCount, NULL) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkEnumerateDeviceExtensionProperties (first call) did not return VK_SUCCESS.");
+    return 0;
+  }
+  VkExtensionProperties* availableExtensions = malloc(availableExtensionCount * sizeof(VkExtensionProperties));
+  if (vkEnumerateDeviceExtensionProperties(physical, NULL, &availableExtensionCount, availableExtensions) != VK_SUCCESS)
+  {
+    ATLR_ERROR_MSG("vkEnumerateDeviceExtensionProperties (second call) did not return VK_SUCCESS.");
+    free(availableExtensions);
+    return 0;
+  }
+   
+  AtlrU8 extensionsFound = 1;
+  for (AtlrU32 i = 0; i < extensionCount; i++)
+  {
+    AtlrU8 found = 0;
+    for (AtlrU32 j = 0; j < availableExtensionCount; j++)
+      if (!strcmp(extensions[i], availableExtensions[j].extensionName))
+	{
+	  found = 1;
+	  atlrLog(ATLR_LOG_DEBUG, "Vulkan device extension \"%s\" is available.", extensions[i]);
+	  break;
+	}
+    if (!found)
+      {
+	atlrLog(ATLR_LOG_DEBUG, "Vulkan device extension \"%s\" is unavailable.", extensions[i]);
+	extensionsFound = 0;
+      }
+  }
+
+  free(availableExtensions);
+  return extensionsFound;
+}
+
 void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict criteria)
 {
   for (AtlrI32 i = 0; i < ATLR_DEVICE_CRITERION_TOT; i++)
@@ -191,19 +192,12 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     AtlrDevice temp = {};
     *device = temp;
   }
-  switch (instance->mode)
-  {
-    case ATLR_MODE_HOST_HEADLESS:
-      atlrLog(ATLR_LOG_INFO, "Initializing Antler device in host headless mode ...");
-      break;
-    case ATLR_MODE_HOST_GLFW:
-      atlrLog(ATLR_LOG_INFO, "Initializing Antler device in host GLFW mode ...");
-      break;
-    case ATLR_MODE_HOOK:
-    default:
-      ATLR_ERROR_MSG("Antler is not in a host-type mode.");
-      return 0;
-  }
+ 
+#ifdef ATLR_BUILD_HOST_HEADLESS
+  atlrLog(ATLR_LOG_INFO, "Initializing Antler device in host headless mode ...");
+#elif ATLR_BUILD_HOST_GLFW
+  atlrLog(ATLR_LOG_INFO, "Initializing Antler device in host GLFW mode ...");
+#endif
   device->instance = instance;
   
   AtlrU32 physicalDeviceCount = 0;
@@ -517,21 +511,14 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
 
 void atlrDeinitDeviceHost(AtlrDevice* device)
 {
-  switch (device->instance->mode)
-  {
-    case ATLR_MODE_HOST_HEADLESS:
-      atlrLog(ATLR_LOG_INFO, "Deinitializing Antler device in host headless mode ...");
-      break;
-    case ATLR_MODE_HOST_GLFW:
-      atlrLog(ATLR_LOG_INFO, "Deinitializing Antler device in host GLFW mode ...");
-      break;
-    case ATLR_MODE_HOOK:
-    default:
-      ATLR_ERROR_MSG("Antler is not in a host-type mode.");
-      return;
-  }
+#ifdef ATLR_BUILD_HOST_HEADLESS
+  atlrLog(ATLR_LOG_INFO, "Deinitializing Antler device in host headless mode ...");
+#elif ATLR_BUILD_HOST_GLFW
+  atlrLog(ATLR_LOG_INFO, "Deinitializing Antler device in host GLFW mode ...");
+#endif
 
   vkDestroyDevice(device->logical, device->instance->allocator);
 
   atlrLog(ATLR_LOG_INFO, "Done deinitializing antler device.");
 }
+#endif

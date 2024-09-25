@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "camera.h"
 
+#ifdef ATLR_BUILD_HOST_GLFW
 AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict camera, const AtlrU8 frameCount, const float fov, const float nearPlane, const float farPlane,
 					 const AtlrDevice* restrict device)
 {
@@ -127,3 +128,4 @@ void atlrPerspectiveCameraLookAtHostGLFW(AtlrPerspectiveCamera* restrict camera,
   camera->uniformData.eyePos = (AtlrVec4){{eyePos->x, eyePos->y, eyePos->z, 0.0f}};
   camera->uniformData.view = atlrLookAt(eyePos, targetPos, worldUpDir);
 }
+#endif

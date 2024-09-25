@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
+
+#ifdef ATLR_BUILD_HOST_GLFW
 static VkSurfaceFormatKHR getSurfaceFormat(const VkSurfaceFormatKHR* restrict availableFormats, const AtlrU32 availableFormatCount)
 {
   for (AtlrU32 i = 0; i < availableFormatCount; i++)
@@ -74,12 +76,6 @@ static VkExtent2D getExtent(const VkSurfaceCapabilitiesKHR* restrict capabilitie
 AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8 initRenderPass, AtlrU8 (*onReinit)(void*), void* reinitData, const VkClearValue* restrict clearColor,
 				 const AtlrDevice* restrict device)
 {
-  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  }
-
   swapchain->onReinit = onReinit;
   swapchain->reinitData = reinitData;
   VkClearValue clearValue = clearColor ? *clearColor : (VkClearValue){.color = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}};
@@ -274,11 +270,6 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
 void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8 deinitRenderPass)
 { 
   const AtlrDevice* device = swapchain->device;
-  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return;
-  }
   atlrLog(ATLR_LOG_INFO, "Deinitializing Antler swapchain in host GLFW mode ...");
 
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
@@ -303,12 +294,6 @@ AtlrU8 atlrReinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain)
   const AtlrDevice* device = swapchain->device;
   AtlrU8 (*onReinit)(void*) = swapchain->onReinit;
   void* reinitData = swapchain->reinitData;
-  
-  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  }
   
   int width = 0;
   int height = 0;
@@ -379,4 +364,5 @@ VkResult atlrSwapchainPresent(const AtlrSwapchain* restrict swapchain, const VkS
   };
   
   return vkQueuePresentKHR(swapchain->device->presentQueue, &presentInfo);
-}				    
+}
+#endif

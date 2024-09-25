@@ -2,6 +2,7 @@
 #include "antler.h"
 #include "transforms.h"
 
+#ifdef ATLR_BUILD_HOST_GLFW
 typedef struct _AtlrPerspectiveCamera
 {
   const AtlrDevice* device;
@@ -27,3 +28,4 @@ AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict, const 
 void atlrDeinitPerspectiveCameraHostGLFW(const AtlrPerspectiveCamera* restrict);
 void atlrUpdatePerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict, const AtlrU8 currentFrame);
 void atlrPerspectiveCameraLookAtHostGLFW(AtlrPerspectiveCamera* restrict, const AtlrVec3* restrict eyePos, const AtlrVec3* restrict targetPos, const AtlrVec3* restrict worldUpDir);
+#endif

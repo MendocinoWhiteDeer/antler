@@ -20,12 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
-static void windowResizeCallback(GLFWwindow* window, int width, int height)
-{
-  AtlrFrameCommandContext* commandContext = (AtlrFrameCommandContext*)glfwGetWindowUserPointer(window);
-  commandContext->isResize = 1;
-}
-
 AtlrU8 atlrInitCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags, const AtlrU32 queueFamilyIndex,
 				   const AtlrDevice* restrict device)
 {
@@ -211,18 +205,19 @@ void atlrCommandSetScissor(const VkCommandBuffer commandBuffer, const VkOffset2D
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
+#ifdef ATLR_BUILD_HOST_GLFW
+static void windowResizeCallback(GLFWwindow* window, int width, int height)
+{
+  AtlrFrameCommandContext* commandContext = (AtlrFrameCommandContext*)glfwGetWindowUserPointer(window);
+  commandContext->isResize = 1;
+}
+
 AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict commandContext, const AtlrU8 frameCount,
 					   AtlrSwapchain* restrict swapchain)
 { 
   commandContext->imageIndex = 0;
   commandContext->swapchain = swapchain;
   const AtlrDevice* device = swapchain->device;
-
-  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  } 
 
   GLFWwindow* window = device->instance->data;
   glfwSetWindowUserPointer(window, commandContext);
@@ -281,12 +276,6 @@ AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict com
 void atlrDeinitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict commandContext)
 {
   const AtlrDevice* device = commandContext->swapchain->device;
-
-  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return;
-  } 
   
   for (AtlrU8 i = 0; i < commandContext->frameCount; i++)
   {
@@ -306,12 +295,6 @@ AtlrU8 atlrBeginFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandC
   const VkCommandBuffer commandBuffer = frame->commandBuffer;
   AtlrSwapchain* swapchain = commandContext->swapchain;
   const AtlrDevice* device = swapchain->device;
-
-  if (device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  } 
   
   vkWaitForFences(device->logical, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -351,12 +334,6 @@ AtlrU8 atlrEndFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict commandCon
   const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
   const VkCommandBuffer commandBuffer = frame->commandBuffer;
   AtlrSwapchain* swapchain = commandContext->swapchain;
-
-  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  } 
 
   atlrEndCommandRecording(commandBuffer);
 
@@ -401,11 +378,6 @@ AtlrU8 atlrFrameCommandContextBeginRenderPassHostGLFW(AtlrFrameCommandContext* r
   const VkExtent2D* extent = &swapchain->extent;
   const VkOffset2D offset = (VkOffset2D){.x = 0, .y = 0};
   const VkFramebuffer framebuffer = swapchain->framebuffers[commandContext->imageIndex];
-  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  }
 
   atlrBeginRenderPass(&swapchain->renderPass, commandBuffer, framebuffer, &swapchain->extent);
   atlrCommandSetViewport(commandBuffer, extent->width, extent->height);
@@ -418,24 +390,14 @@ AtlrU8 atlrFrameCommandContextEndRenderPassHostGLFW(AtlrFrameCommandContext* res
 {
   const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
   const VkCommandBuffer commandBuffer = frame->commandBuffer;
-  AtlrSwapchain* swapchain = commandContext->swapchain;
-  if (swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return 0;
-  }
   atlrEndRenderPass(commandBuffer);
 
   return 1;
 }
 
 VkCommandBuffer atlrGetFrameCommandContextCommandBufferHostGLFW(const AtlrFrameCommandContext* restrict commandContext)
-{
-  if (commandContext->swapchain->device->instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return VK_NULL_HANDLE;
-  } 
+{ 
   const AtlrFrame* frame = commandContext->frames + commandContext->currentFrame;
   return frame->commandBuffer;
 }
+#endif

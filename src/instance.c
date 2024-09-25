@@ -185,6 +185,7 @@ static AtlrU8 areInstanceExtensionsAvailable(const char** restrict extensions, c
   return extensionsFound;
 }
 
+#ifdef ATLR_BUILD_HOST_HEADLESS
 AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char* restrict name)
 {
   {
@@ -192,7 +193,6 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
     *instance = temp;
   }
   atlrLog(ATLR_LOG_INFO, "Initializing Antler instance in host headless mode ...");
-  instance->mode = ATLR_MODE_HOST_HEADLESS;
 
   if (!glslang_initialize_process())
   {
@@ -270,11 +270,6 @@ AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict instance, const char*
 
 void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict instance)
 {
-  if (instance->mode != ATLR_MODE_HOST_HEADLESS)
-  {
-    ATLR_ERROR_MSG("Antler is not in host headless mode.");
-    return;
-  }
   atlrLog(ATLR_LOG_INFO, "Deinitializing antler instance in host headless mode ...");
 
 #ifdef ATLR_DEBUG
@@ -286,7 +281,9 @@ void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict instance)
    
   atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }
+#endif
 
+#ifdef ATLR_BUILD_HOST_GLFW
 AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width, const int height, const char* restrict name)
 {
   {
@@ -294,7 +291,6 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
     *instance = temp;
   }
   atlrLog(ATLR_LOG_INFO, "Initializing Antler instance in GLFW mode ...");
-  instance->mode = ATLR_MODE_HOST_GLFW;
 
   if (!glslang_initialize_process())
   {
@@ -391,11 +387,6 @@ AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict instance, const int width
 
 void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict instance)
 {
-  if (instance->mode != ATLR_MODE_HOST_GLFW)
-  {
-    ATLR_ERROR_MSG("Antler is not in host GLFW mode.");
-    return;
-  }
   atlrLog(ATLR_LOG_INFO, "Deinitializing Antler instance in host GLFW mode ...");
 
   vkDestroySurfaceKHR(instance->instance, instance->surface, instance->allocator);
@@ -412,3 +403,4 @@ void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict instance)
    
   atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }
+#endif

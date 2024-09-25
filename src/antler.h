@@ -4,7 +4,9 @@
 #include <string.h>
 #include <glslang/Include/glslang_c_interface.h>
 #include <vulkan/vulkan.h>
+#ifdef ATLR_BUILD_HOST_GLFW
 #include "GLFW/glfw3.h"
+#endif
 
 ///
 /// Data types
@@ -37,17 +39,8 @@ typedef struct _AtlrSpirVBinary
   
 } AtlrSpirVBinary;
 
-typedef enum
-{
-  ATLR_MODE_HOST_HEADLESS,
-  ATLR_MODE_HOST_GLFW,
-  ATLR_MODE_HOOK
-  
-} AtlrMode;
-
 typedef struct _AtlrInstance
 {
-  AtlrMode mode;
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger;
   VkAllocationCallbacks* allocator;
@@ -74,6 +67,8 @@ typedef struct _AtlrSwapchainSupportDetails
   VkPresentModeKHR* presentModes;
   
 } AtlrSwapchainSupportDetails;
+
+#if defined(ATLR_BUILD_HOST_HEADLESS) || defined(ATLR_BUILD_HOST_GLFW)
 
 typedef enum
 {
@@ -122,6 +117,7 @@ typedef struct _AtlrDeviceCriterion
 } AtlrDeviceCriterion;
 
 typedef AtlrDeviceCriterion AtlrDeviceCriteria[ATLR_DEVICE_CRITERION_TOT];
+#endif
 
 typedef struct _AtlrDevice
 {
@@ -209,6 +205,7 @@ typedef struct _AtlrRenderPass
   
 } AtlrRenderPass;
 
+#ifdef ATLR_BUILD_HOST_GLFW
 typedef struct _AtlrSwapchain
 {
   const AtlrDevice* device;
@@ -250,6 +247,7 @@ typedef struct _AtlrFrameCommandContext
   AtlrFrame* frames;
   
 } AtlrFrameCommandContext;
+#endif
 
 //
 // Functions
@@ -270,18 +268,23 @@ AtlrU8 atlrInitSpirVBinary(AtlrSpirVBinary* restrict, glslang_stage_t stage, con
 void atlrDeinitSpirVBinary(AtlrSpirVBinary* restrict bin);
 
 // instance.c
+#ifdef ATLR_BUILD_HOST_HEADLESS
 AtlrU8 atlrInitInstanceHostHeadless(AtlrInstance* restrict, const char* restrict name);
 void atlrDeinitInstanceHostHeadless(const AtlrInstance* restrict);
+#elif ATLR_BUILD_HOST_GLFW
 AtlrU8 atlrInitInstanceHostGLFW(AtlrInstance* restrict, const int width, const int height, const char* restrict name);
 void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict);
+#endif
 
 // device.c
+#if defined(ATLR_BUILD_HOST_HEADLESS) || defined(ATLR_BUILD_HOST_GLFW)
 AtlrU8 atlrInitSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict, const AtlrInstance* restrict, const VkPhysicalDevice);
 void atlrDeinitSwapchainSupportDetails(AtlrSwapchainSupportDetails* restrict);
 void atlrInitDeviceCriteria(AtlrDeviceCriterion* restrict);
 AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDeviceCriterionType, AtlrDeviceCriterionMethod, AtlrI32 pointShift);
 AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict, const AtlrInstance* restrict, const AtlrDeviceCriterion* restrict);
 void atlrDeinitDeviceHost(AtlrDevice* restrict);
+#endif
 
 // commands.c
 AtlrU8 atlrInitCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags, const AtlrU32 queueFamilyIndex,
@@ -299,6 +302,8 @@ AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict, const AtlrSingle
 AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecordCommandContext* restrict);
 void atlrCommandSetViewport(const VkCommandBuffer, const float width, const float height);
 void atlrCommandSetScissor(const VkCommandBuffer, const VkOffset2D* restrict, const VkExtent2D* restrict);
+
+#ifdef ATLR_BUILD_HOST_GLFW
 AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict, const AtlrU8 frameCount,
 					   AtlrSwapchain* restrict);
 void atlrDeinitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict);
@@ -307,6 +312,7 @@ AtlrU8 atlrEndFrameCommandsHostGLFW(AtlrFrameCommandContext* restrict);
 AtlrU8 atlrFrameCommandContextBeginRenderPassHostGLFW(AtlrFrameCommandContext* restrict);
 AtlrU8 atlrFrameCommandContextEndRenderPassHostGLFW(AtlrFrameCommandContext* restrict);
 VkCommandBuffer atlrGetFrameCommandContextCommandBufferHostGLFW(const AtlrFrameCommandContext* restrict);
+#endif
 
 // buffer.c
 AtlrU8 atlrUniformBufferAlignment(AtlrU64* restrict aligned, const AtlrU64 offset, const AtlrDevice* restrict);
@@ -419,6 +425,7 @@ void atlrBeginRenderPass(const AtlrRenderPass* restrict,
 void atlrEndRenderPass(const VkCommandBuffer);
 
 // swapchain.c
+#ifdef ATLR_BUILD_HOST_GLFW
 AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrU8 initRenderPass, AtlrU8 (*onReinit)(void*), void* reinitData, const VkClearValue* restrict clearColor,
 				 const AtlrDevice* restrict);
 void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict, const AtlrU8 deinitRenderPass);
@@ -427,3 +434,4 @@ VkResult atlrNextSwapchainImage(const AtlrSwapchain* restrict, const VkSemaphore
 VkResult atlrSwapchainSubmit(const AtlrSwapchain* restrict, const VkCommandBuffer,
 			     const VkSemaphore imageAvailableSemaphore, const VkSemaphore renderFinishedSemaphore, const VkFence);
 VkResult atlrSwapchainPresent(const AtlrSwapchain* restrict, const VkSemaphore renderFinishedSemaphore, const AtlrU32* restrict imageIndex);
+#endif
