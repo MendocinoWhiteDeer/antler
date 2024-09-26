@@ -15,10 +15,12 @@ message("Build type: ${CMAKE_BUILD_TYPE}")
 
 # define the antler build modes (glfw, headless, and hook)
 option(ATLR_BUILD_HOST_HEADLESS "Build antler in headless host mode" ON)
-option(ATLR_BUILD_HOST_GLFW "Build antler in GLFW host mode and build antler-imgui" ON)
+option(ATLR_BUILD_HOST_GLFW "Build antler in GLFW host mode" ON)
+option(ATLR_BUILD_HOST_GLFW_IMGUI "Build antler in GLFW host mode with imgui" ON)
 option(ATLR_BUILD_HOOK "Build antler in hook mode" ON)
 message("Build antler in headless host mode: ${ATLR_BUILD_HOST_HEADLESS}")
-message("Build antler in GLFW host mode and build antler-imgui: ${ATLR_BUILD_HOST_GLFW}")
+message("Build antler in GLFW host mode: ${ATLR_BUILD_HOST_GLFW}")
+message("Build antler in GLFW host mode with imgui: ${ATLR_BUILD_HOST_GLFW_IMGUI}")
 message("Build antler in hook mode: ${ATLR_BUILD_HOOK}")
 
 # compile flags
@@ -50,6 +52,26 @@ endif()
 
 if (ATLR_BUILD_HOST_GLFW)
   add_library(antler-host-glfw	
+  	"src/transforms.c"
+  	"src/logger.c"
+	"src/util.c"
+	"src/instance.c"
+	"src/device.c"
+	"src/commands.c"
+	"src/buffer.c"
+	"src/image.c"
+	"src/descriptor.c"
+	"src/pipeline.c"
+	"src/render-pass.c"
+	"src/swapchain.c"
+	"src/offscreen-canvas.c"
+	"src/camera.c")
+  target_include_directories(antler-host-glfw PUBLIC "${PROJECT_SOURCE_DIR}/src")
+  target_compile_definitions(antler-host-glfw PUBLIC ATLR_BUILD_HOST_GLFW)
+endif()
+
+if (ATLR_BUILD_HOST_GLFW_IMGUI AND NOT ATLR_BUILD_HOST_GLFW)
+  add_library(antler-host-glfw OBJECT
   	"src/transforms.c"
   	"src/logger.c"
 	"src/util.c"
@@ -124,7 +146,7 @@ if (ATLR_BUILD_HOOK)
 endif()
 
 # antler imgui lib
-if (ATLR_BUILD_HOST_GLFW)
+if (ATLR_BUILD_HOST_GLFW_IMGUI)
   add_library(antler-imgui
 	"src/antler-imgui.cpp"
 	"lib/imgui/imgui.cpp"

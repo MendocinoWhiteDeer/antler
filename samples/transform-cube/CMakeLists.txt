@@ -1,4 +1,4 @@
-if (ATLR_BUILD_HOST_GLFW)
+if (ATLR_BUILD_HOST_GLFW_IMGUI)
   set(TRANSFORM_CUBE_SAMPLE_DIR "${SAMPLES_DIR}/transform-cube")
   set(TRANSFORM_CUBE_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/transform-cube")
   add_executable(transform-cube-sample "${TRANSFORM_CUBE_SAMPLE_DIR}/main.cpp")

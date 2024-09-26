@@ -1,4 +1,4 @@
-if (ATLR_BUILD_HOST_GLFW)
+if (ATLR_BUILD_HOST_GLFW_IMGUI)
   set(SHELL_TEXTURING_SAMPLE_DIR "${SAMPLES_DIR}/shell-texturing")
   set(SHELL_TEXTURING_SAMPLE_BIN_DIR "${SAMPLES_BIN_DIR}/shell-texturing")
   add_executable(shell-texturing-sample "${SHELL_TEXTURING_SAMPLE_DIR}/main.cpp")
