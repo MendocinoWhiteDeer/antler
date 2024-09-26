@@ -39,8 +39,8 @@ vec3 lightDir = vec3(0.0f, 0.0f, -1.0f);
 vec3 surfaceColor = vec3(0.1f, 0.9f, 0.1f);
 float blue = 0.4f;
 float yellow = 0.4f;
-float attenuation = 0.1f;
-float diffuseContrib = 0.2f; // between 0.0f and 1.0, it is a lerp factor between ambient occlusion and the lambertian diffuse
+float attenuation = 5.0f;
+float diffuseContrib = 0.2f; // between 0.0f and 1.0, it is a lerp factor between grass occlusion and the lambertian diffuse
 
 /*
 REY, W. 1998. On generating random numbers, with help of y= [(a+x)sin(bx)] mod 1.
