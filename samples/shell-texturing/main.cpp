@@ -53,17 +53,31 @@ static AtlrFrameCommandContext commandContext;
 static AtlrMesh planeMesh;
 static AtlrPerspectiveCamera camera;
 
+static AtlrDescriptorPool descriptorPool;
+
 static struct
 {
   float extrusion;
-  int count;
-  int pad[2];
+  AtlrI32 count;
+  AtlrI32 pad[2];
   
 } shellUniformData;
 static AtlrBuffer shellUniformBuffers[MAX_FRAMES_IN_FLIGHT];
 static AtlrDescriptorSetLayout shellDescriptorSetLayout;
-static AtlrDescriptorPool shellDescriptorPool;
 static VkDescriptorSet shellDescriptorSets[MAX_FRAMES_IN_FLIGHT];
+
+static struct
+{
+  AtlrI32 resolution;
+  float thickness;
+  float occlusionAttenuation;
+  float diffuseContrib;
+  
+} grassUniformData;
+static AtlrBuffer grassUniformBuffers[MAX_FRAMES_IN_FLIGHT];
+static AtlrDescriptorSetLayout grassDescriptorSetLayout;
+static VkDescriptorSet grassDescriptorSets[MAX_FRAMES_IN_FLIGHT];
+
 static AtlrPipeline grassPipeline;
 static Atlr::ImguiContext imguiContext;
 
@@ -83,53 +97,87 @@ static AtlrU8 initDescriptor()
       ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
       return 0;
     }
+
+    if (!atlrInitBuffer(grassUniformBuffers + i, sizeof(grassUniformData), usage, memoryProperties, &device))
+    {
+      ATLR_ERROR_MSG("atlrInitBuffer returned 0.");
+      return 0;
+    }
+    if (!atlrMapBuffer(grassUniformBuffers + i, 0, sizeof(grassUniformData), 0))
+    {
+      ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
+      return 0;
+    }
   }
 
   const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   
-  const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, VK_SHADER_STAGE_GEOMETRY_BIT);
+  VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, VK_SHADER_STAGE_GEOMETRY_BIT);
   if (!atlrInitDescriptorSetLayout(&shellDescriptorSetLayout, 1, &descriptorSetLayoutBinding, &device))
   {
     ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
     return 0;
   }
+  descriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  if (!atlrInitDescriptorSetLayout(&grassDescriptorSetLayout, 1, &descriptorSetLayoutBinding, &device))
+  {
+    ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
+    return 0;
+  }
 
-  VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, MAX_FRAMES_IN_FLIGHT);
-  if (!atlrInitDescriptorPool(&shellDescriptorPool, MAX_FRAMES_IN_FLIGHT, 1, &poolSize, &device))
+  VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, 2 * MAX_FRAMES_IN_FLIGHT);
+  if (!atlrInitDescriptorPool(&descriptorPool, 2 * MAX_FRAMES_IN_FLIGHT, 1, &poolSize, &device))
   {
     ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
     return 0;
   }
 
-  VkDescriptorSetLayout setLayouts[MAX_FRAMES_IN_FLIGHT];
-  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) setLayouts[i] = shellDescriptorSetLayout.layout;
-  if (!atlrAllocDescriptorSets(&shellDescriptorPool, MAX_FRAMES_IN_FLIGHT, setLayouts, shellDescriptorSets))
+  VkDescriptorSetLayout setLayouts[2 * MAX_FRAMES_IN_FLIGHT];
+  for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+  {
+    setLayouts[i]                        = shellDescriptorSetLayout.layout;
+    setLayouts[MAX_FRAMES_IN_FLIGHT + i] = grassDescriptorSetLayout.layout;
+  }
+  if (!atlrAllocDescriptorSets(&descriptorPool, MAX_FRAMES_IN_FLIGHT, setLayouts, shellDescriptorSets))
+  {
+    ATLR_ERROR_MSG("atlrAllocDescriptorSets returned 0.");
+    return 0;
+  }
+  if (!atlrAllocDescriptorSets(&descriptorPool, MAX_FRAMES_IN_FLIGHT, setLayouts + MAX_FRAMES_IN_FLIGHT, grassDescriptorSets))
   {
     ATLR_ERROR_MSG("atlrAllocDescriptorSets returned 0.");
     return 0;
   }
 
-  VkDescriptorBufferInfo bufferInfos[MAX_FRAMES_IN_FLIGHT];
-  VkWriteDescriptorSet descriptorWrites[MAX_FRAMES_IN_FLIGHT];
+  VkDescriptorBufferInfo bufferInfos[2 * MAX_FRAMES_IN_FLIGHT];
+  VkWriteDescriptorSet descriptorWrites[2 * MAX_FRAMES_IN_FLIGHT];
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
   {
     bufferInfos[i] = atlrInitDescriptorBufferInfo(shellUniformBuffers + i, sizeof(shellUniformData));
     descriptorWrites[i] = atlrWriteBufferDescriptorSet(shellDescriptorSets[i], 0, type, bufferInfos + i);
+
+    bufferInfos[MAX_FRAMES_IN_FLIGHT + i] = atlrInitDescriptorBufferInfo(grassUniformBuffers + i, sizeof(grassUniformData));
+    descriptorWrites[MAX_FRAMES_IN_FLIGHT + i] = atlrWriteBufferDescriptorSet(grassDescriptorSets[i], 0, type, bufferInfos + MAX_FRAMES_IN_FLIGHT + i);
   }
-  vkUpdateDescriptorSets(device.logical, MAX_FRAMES_IN_FLIGHT, descriptorWrites, 0, NULL);
+  vkUpdateDescriptorSets(device.logical, 2 * MAX_FRAMES_IN_FLIGHT, descriptorWrites, 0, NULL);
 
   return 1;
 }
 
 static void deinitDescriptor()
 {
-  atlrDeinitDescriptorPool(&shellDescriptorPool);
+  atlrDeinitDescriptorPool(&descriptorPool);
+  atlrDeinitDescriptorSetLayout(&grassDescriptorSetLayout);
   atlrDeinitDescriptorSetLayout(&shellDescriptorSetLayout);
   for (AtlrU8 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
   {
-    AtlrBuffer* uniformBuffer = shellUniformBuffers + i;
-    atlrUnmapBuffer(uniformBuffer);
-    atlrDeinitBuffer(uniformBuffer);
+    AtlrBuffer* shellBuffer = shellUniformBuffers + i;
+    atlrUnmapBuffer(shellBuffer);
+    atlrDeinitBuffer(shellBuffer);
+
+    AtlrBuffer* grassBuffer = grassUniformBuffers + i;
+    atlrUnmapBuffer(grassBuffer);
+    atlrDeinitBuffer(grassBuffer);
   }
 }
 
@@ -161,12 +209,12 @@ static AtlrU8 initPipelines()
   const VkPipelineColorBlendStateCreateInfo colorBlendInfo       = atlrInitPipelineColorBlendStateInfo(&colorBlendAttachment);
   const VkPipelineDynamicStateCreateInfo dynamicInfo             = atlrInitPipelineDynamicStateInfo();
 
-  const VkDescriptorSetLayout setLayouts[2] = {camera.descriptorSetLayout.layout, shellDescriptorSetLayout.layout};
+  const VkDescriptorSetLayout setLayouts[3] = {camera.descriptorSetLayout.layout, shellDescriptorSetLayout.layout, grassDescriptorSetLayout.layout};
   const VkPushConstantRange pushConstantRange =
   {
     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = sizeof(WorldTransform)
   };
-  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(2, setLayouts, 1, &pushConstantRange);
+  const VkPipelineLayoutCreateInfo pipelineLayoutInfo = atlrInitPipelineLayoutInfo(3, setLayouts, 1, &pushConstantRange);
 
   // grass pipeline
   {
@@ -333,11 +381,18 @@ int main()
   {
       .scale = (AtlrVec3){{1.0f, 1.0f, 1.0f}},
       .rotate = atlrUnitQuatFromAxisAngle(&axis, angle),
-      .translate = (AtlrVec3){{0.0f, 0.0f, 0.0f}}
+      .translate = (AtlrVec3){{0.0f, 0.0f, -0.5f}}
   };
 
+  // geometry shader initial shell uniform data
   shellUniformData.extrusion = 0.05f;
   shellUniformData.count = 16;
+
+  // fragment shader initial grass uniform data
+  grassUniformData.resolution = 64;
+  grassUniformData.thickness = 0.85f;
+  grassUniformData.occlusionAttenuation = 2.5f;
+  grassUniformData.diffuseContrib = 0.2f;
 
   GLFWwindow* window = (GLFWwindow*)instance.data;
   while(!glfwWindowShouldClose(window))
@@ -378,6 +433,11 @@ int main()
     // bind shell descriptor set
     vkCmdBindDescriptorSets(commandBuffer, pipeline->bindPoint, pipeline->layout, 1, 1, shellDescriptorSets + commandContext.currentFrame, 0, NULL);
 
+    // update grass data
+    memcpy(grassUniformBuffers[commandContext.currentFrame].data, &grassUniformData, sizeof(grassUniformData));
+    // bind grass descriptor set
+    vkCmdBindDescriptorSets(commandBuffer, pipeline->bindPoint, pipeline->layout, 2, 1, grassDescriptorSets + commandContext.currentFrame, 0, NULL);
+
     // draw scene
     vkCmdBindPipeline(commandBuffer, pipeline->bindPoint, pipeline->pipeline);
     atlrBindMesh(msh, commandBuffer);
@@ -403,7 +463,14 @@ int main()
     if (ImGui::CollapsingHeader("Shell Data"))
     {
       ImGui::SliderFloat("total extrusion", &shellUniformData.extrusion, 0.01f, 0.2f, 0);
-      ImGui::SliderInt("shell count", &shellUniformData.count, 1, 32);
+      ImGui::SliderInt("shell count", &shellUniformData.count, 1, 64);
+    }
+    if (ImGui::CollapsingHeader("Grass Data"))
+    {
+      ImGui::SliderInt("resolution", &grassUniformData.resolution, 8, 256);
+      ImGui::SliderFloat("thickness", &grassUniformData.thickness, 0.2f, 3.0f, "%.3f", 0);
+      ImGui::SliderFloat("occlusion attenuation", &grassUniformData.occlusionAttenuation, 0.0f, 5.0f, "%.3f", 0);
+      ImGui::SliderFloat("diffuse contribution", &grassUniformData.diffuseContrib, 0.0f, 1.0f, "%.3f", 0);
     }
     ImGui::End();
     imguiContext.draw(commandBuffer, commandContext.currentFrame);

@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #version 460
 
-#define MAX_SHELLS 32
+#define MAX_SHELLS 64
 #define MAX_VERTICES (3 * MAX_SHELLS)
 
 layout (triangles) in;

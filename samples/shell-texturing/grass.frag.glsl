@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 /*
-This shader uses Gooch lighting with an simple ambient occlusion contribution.
+This shader uses Gooch shading with a simplified ambient occlusion contribution.
 
 Reference:
 
@@ -35,12 +35,19 @@ layout(location = 1) in vec3 inUvw;
 
 layout(location = 0) out vec4 outColor;
 
-vec3 lightDir = vec3(0.0f, 0.0f, -1.0f);		
-vec3 surfaceColor = vec3(0.1f, 0.9f, 0.1f);
-float blue = 0.4f;
-float yellow = 0.4f;
-float attenuation = 5.0f;
-float diffuseContrib = 0.2f; // between 0.0f and 1.0, it is a lerp factor between grass occlusion and the lambertian diffuse
+layout(set = 2, binding = 0) uniform GrassData
+{
+	int resolution;
+	float thickness;
+	float occlusionAttenuation;
+	float diffuseContrib; // between 0.0f and 1.0, it is a lerp factor between simplified ambient occlusion and the lambertian diffuse
+
+} grass; 
+
+const vec3 lightDir = vec3(0.0f, 0.0f, -1.0f);		
+const vec3 surfaceColor = vec3(0.1f, 0.9f, 0.1f);
+const float blue = 0.4f;
+const float yellow = 0.4f;
 
 /*
 REY, W. 1998. On generating random numbers, with help of y= [(a+x)sin(bx)] mod 1.
@@ -55,16 +62,28 @@ float rand(vec2 coord)
 
 void main()
 {
-	if (inUvw.z > rand(inUvw.xy) + 10e-5) discard; // need to discard explicitly! 
+	vec2 c = inUvw.xy * grass.resolution + 0.5f;
+	float noise = rand(clamp(floor(c), 0.0f, grass.resolution));
+	vec2 nudge = 0.25f * (2.0f * vec2(rand(vec2(1002.78 + 21.1 * noise, 9652411.3 - 3.67 * noise)), rand(vec2(19.22 * noise - 48382.7, 901.73 * noise + 111834.326))) - 1.0f);
+	vec2 local = 2.0f * fract(c + nudge) - 1.0f;
+	float r =  (1.0f - length(nudge)) * grass.thickness * (noise - inUvw.z);
+
+	// r > rmax gives the grass a conical look
+	if (inUvw.z > 10e-5 && length(local) > r) discard; // need to discard explicitly
 
 	vec3 normal = normalize(inNormal);
 
-	vec3 coolColor = blue * vec3(0.0f, 0.0f, 1.0f) + 0.2f * surfaceColor;
-	vec3 warmColor = yellow * vec3(1.0f, 1.0f, 0.0f) + 0.6f * surfaceColor;
+	vec3 coolColor = blue * vec3(0.0f, 0.0f, 1.0f) + 0.1f * surfaceColor;
+	vec3 warmColor = yellow * vec3(1.0f, 1.0f, 0.0f) + 0.7f * surfaceColor;
 
 	float dp = -dot(normal, lightDir);
-	float occlusion = 2.0f * (exp(attenuation * (inUvw.z - 1.0f)) - 1.0f) / (1.0f - exp(-attenuation)) + 1.0f; // rudimentary, the higher the grass blade, the less occluded
-	float l = mix(occlusion, dp, diffuseContrib);
+	// rudimentary, the higher the grass blade, the less occluded; it is designed to be between -1 and 1
+	// If you do a Taylor expansion of the exponential ratio with respect to the attenuation, the first term is 2 * z - 1, the error = |(z - 1 ) * z * attenuation| <= 0.25 * attenuation for z in [0, 1]
+	// So 4e-2 should be a good threshold value. The attenuation can't be plugged in as zero in the ratio or you are dividing by zero!
+	float occlusion = 2.0f * inUvw.z - 1.0f;
+	if (grass.occlusionAttenuation > 4e-2)
+	   occlusion = 2.0f * (exp(grass.occlusionAttenuation * (inUvw.z - 1.0f)) - 1.0f) / (1.0f - exp(-grass.occlusionAttenuation)) + 1.0f; 
+	float l = mix(occlusion, dp, grass.diffuseContrib);
 	vec3 color = 0.5f * ((warmColor + coolColor) + l * (warmColor - coolColor));
 
 	outColor = vec4(color, 1.0f);
