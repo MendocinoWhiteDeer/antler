@@ -51,6 +51,7 @@ static AtlrSwapchain swapchain;
 static AtlrSingleRecordCommandContext singleRecordCommandContext;
 static AtlrFrameCommandContext commandContext;
 static AtlrMesh planeMesh;
+static AtlrMesh sphereMesh;
 static AtlrPerspectiveCamera camera;
 
 static AtlrDescriptorPool descriptorPool;
@@ -294,42 +295,105 @@ static AtlrU8 initShellTexturing()
     return 0;
   }
 
-  const AtlrVec3 positions[4] =
+  // plane mesh
   {
-    {{-0.5f, -0.5f,  0.0f}},
-    {{ 0.5f, -0.5f,  0.0f}},
-    {{ 0.5f,  0.5f,  0.0f}},
-    {{-0.5f,  0.5f,  0.0f}}
-  };
-  const AtlrVec3 normal = {{0.0f, 0.0f, 1.0f}};
-  const Vertex vertices[4] =
-  {
-    // top face
-    (Vertex){.pos = positions[0], .normal = normal, .uv = {{0.0f, 0.0f}}},
-    (Vertex){.pos = positions[1], .normal = normal, .uv = {{1.0f, 0.0f}}},
-    (Vertex){.pos = positions[2], .normal = normal, .uv = {{1.0f, 1.0f}}},
-    (Vertex){.pos = positions[3], .normal = normal, .uv = {{0.0f, 1.0f}}}
-  }; 
-  const AtlrU16 indices[6] =
-  {
-    0, 2, 1, 3, 2, 0
-  };
-  if (!atlrInitMesh(&planeMesh, 4 * sizeof(Vertex), vertices, 6, indices, &device, &singleRecordCommandContext))
-  {
-    ATLR_ERROR_MSG("atlrInitMesh returned 0.");
-    return 0;
-  }
+    const AtlrVec3 positions[4] =
+      {
+	{{-0.5f, -0.5f,  0.0f}},
+	{{ 0.5f, -0.5f,  0.0f}},
+	{{ 0.5f,  0.5f,  0.0f}},
+	{{-0.5f,  0.5f,  0.0f}}
+      };
+    const AtlrVec3 normal = {{0.0f, 0.0f, 1.0f}};
+    const Vertex vertices[4] =
+      {
+	// top face
+	(Vertex){.pos = positions[0], .normal = normal, .uv = {{0.0f, 0.0f}}},
+	(Vertex){.pos = positions[1], .normal = normal, .uv = {{1.0f, 0.0f}}},
+	(Vertex){.pos = positions[2], .normal = normal, .uv = {{1.0f, 1.0f}}},
+	(Vertex){.pos = positions[3], .normal = normal, .uv = {{0.0f, 1.0f}}}
+      }; 
+    const AtlrU16 indices[6] =
+      {
+	0, 2, 1, 3, 2, 0
+      };
+    if (!atlrInitMesh(&planeMesh, 4 * sizeof(Vertex), vertices, 6, indices, &device, &singleRecordCommandContext))
+      {
+	ATLR_ERROR_MSG("atlrInitMesh returned 0.");
+	return 0;
+      }
 
-  if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
-  {
-    ATLR_ERROR_MSG("atlrInitPerspectiveCameraHostGLFW returned 0.");
-    return 0;
+    if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
+      {
+	ATLR_ERROR_MSG("atlrInitPerspectiveCameraHostGLFW returned 0.");
+	return 0;
+      }
+    {
+      const AtlrVec3 eyePos = {{2.0f, 0.0f, 1.0f}};
+      const AtlrVec3 targetPos = {{0.0f, 0.0f, 0.0f}};
+      const AtlrVec3 worldUpDir = {{0.0f, 0.0f, 1.0f}};
+      atlrPerspectiveCameraLookAtHostGLFW(&camera, &eyePos, &targetPos, &worldUpDir);
+    }
   }
+  
+  // sphere mesh
   {
-    const AtlrVec3 eyePos = {{2.0f, 0.0f, 1.0f}};
-    const AtlrVec3 targetPos = {{0.0f, 0.0f, 0.0f}};
-    const AtlrVec3 worldUpDir = {{0.0f, 0.0f, 1.0f}};
-    atlrPerspectiveCameraLookAtHostGLFW(&camera, &eyePos, &targetPos, &worldUpDir);
+    // Generating a unit sphere the easy way (no nice-looking icosphere, haha).
+    // x = sin(u) cos(v), y = sin(u) sin(v), z = cos(u)
+    const AtlrU8 polarCount = 16; // number of latitude lines
+    const AtlrU8 azimuthalCount = 16; // number of longitude lines, MUST be a power of 2!
+    const float du = M_PI / (polarCount - 1); 
+    const float dv = 2.0f * M_PI / azimuthalCount;
+
+    const AtlrU64 d = polarCount * azimuthalCount;
+    Vertex vertices[d];
+    AtlrVec3 r;
+    AtlrVec2 st;
+    for (AtlrU8 i = 0; i < polarCount; i++)
+    {
+      const float u = i * du;
+      const float rho = 0.25f * sinf(u);
+      r.z = 0.25f * cosf(u);
+      
+      st.y = i / (float)(polarCount - 1);
+      
+      for (AtlrU8 j = 0; j < azimuthalCount; j++)
+      {
+	const float v = j * dv;
+	r.x = rho * cosf(v);
+	r.y = rho * sinf(v);
+	
+	st.x = (j <= (azimuthalCount - 1) / 2) ? j / (float)(azimuthalCount - 1) : (azimuthalCount - j) / (float)(azimuthalCount - 1);
+	
+	vertices[i * azimuthalCount + j] = (Vertex){.pos = r, .normal = atlrVec3Normalize(&r), .uv = st};
+      }
+    }
+
+    const AtlrU64 e =  6 * azimuthalCount * (polarCount - 1);
+    AtlrU16 indices[e];
+    for (AtlrU8 i = 1; i < polarCount; i++)
+    {
+      const AtlrU64 um = (i - 1) * azimuthalCount;
+      const AtlrU64 up = i * azimuthalCount;
+      for (AtlrU8 j = 0; j < azimuthalCount; j++)
+      {
+	const AtlrU64 v = (j + 1) & (azimuthalCount - 1);
+	const AtlrU64 idx = (um + j) * 6;
+      
+	indices[idx]     = um + j;
+	indices[idx + 2] = up + j; 
+	indices[idx + 1] = um + v;
+	indices[idx + 3] = um + v;
+	indices[idx + 5] = up + j;
+	indices[idx + 4] = up + v;
+      }
+    }
+
+    if (!atlrInitMesh(&sphereMesh, sizeof(vertices), vertices, sizeof(indices) / sizeof(AtlrU16), indices, &device, &singleRecordCommandContext))
+      {
+	ATLR_ERROR_MSG("atlrInitMesh returned 0.");
+	return 0;
+      }
   }
 
   if(!initDescriptor())
@@ -359,6 +423,7 @@ static void deinitShellTexturing()
   deinitPipelines();
   deinitDescriptor();
   atlrDeinitPerspectiveCameraHostGLFW(&camera);
+  atlrDeinitMesh(&sphereMesh);
   atlrDeinitMesh(&planeMesh);
   atlrDeinitFrameCommandContextHostGLFW(&commandContext);
   atlrDeinitSingleRecordCommandContext(&singleRecordCommandContext);
@@ -394,6 +459,10 @@ int main()
   grassUniformData.occlusionAttenuation = 2.5f;
   grassUniformData.diffuseContrib = 0.2f;
 
+  // toggle between sphere and plane
+  enum MeshType {MESH_TYPE_PLANE, MESH_TYPE_SPHERE};
+  int meshType = MESH_TYPE_PLANE;
+
   GLFWwindow* window = (GLFWwindow*)instance.data;
   while(!glfwWindowShouldClose(window))
   {
@@ -421,7 +490,12 @@ int main()
     world.normalTransform = atlrMat4NormalFromNodeTransform(&node);
 
     AtlrPipeline* pipeline = &grassPipeline;
-    AtlrMesh* msh = &planeMesh;
+    AtlrMesh* msh = NULL;
+    switch (meshType)
+    {
+     case MESH_TYPE_PLANE: msh = &planeMesh; break;
+     case MESH_TYPE_SPHERE: msh = &sphereMesh; break;
+    }
 
     // update camera
     atlrUpdatePerspectiveCameraHostGLFW(&camera, commandContext.currentFrame);
@@ -447,6 +521,8 @@ int main()
     // imgui
     imguiContext.bind(commandBuffer, commandContext.currentFrame);
     ImGui::Begin("Shell Texturing Widget");
+    ImGui::RadioButton("plane mesh", &meshType, MESH_TYPE_PLANE); ImGui::SameLine();
+    ImGui::RadioButton("sphere mesh", &meshType, MESH_TYPE_SPHERE);
     if (ImGui::CollapsingHeader("Mesh Transform"))
     {
       ImGui::SliderFloat("scale.x", &node.scale.x, 1.0f, 5.0f, "%.3f", 0);

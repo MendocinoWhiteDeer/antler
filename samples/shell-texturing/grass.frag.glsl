@@ -74,7 +74,7 @@ void main()
 	vec3 normal = normalize(inNormal);
 
 	vec3 coolColor = blue * vec3(0.0f, 0.0f, 1.0f) + 0.1f * surfaceColor;
-	vec3 warmColor = yellow * vec3(1.0f, 1.0f, 0.0f) + 0.7f * surfaceColor;
+	vec3 warmColor = yellow * vec3(1.0f, 1.0f, 0.0f) + 0.74f * surfaceColor;
 
 	float dp = -dot(normal, lightDir);
 	// rudimentary, the higher the grass blade, the less occluded; it is designed to be between -1 and 1

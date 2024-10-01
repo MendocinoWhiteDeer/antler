@@ -286,7 +286,7 @@ static AtlrU8 initGooch()
 
   // Generating a unit sphere the easy way (no nice-looking icosphere, haha).
   // x = sin(u) cos(v), y = sin(u) sin(v), z = cos(u)
-  // Sphere is a manifold that needs min of two charts, so the poles separately
+  // Sphere is a manifold that needs min of two charts, so the treat the poles separately
   // 0 = f(x,y,z) = x^2 + y^2 + z^2 - 1, normal = grad(f) / |grad(f)| = (x y z)
   const AtlrU8 polarCount = 16; // number of latitude lines
   const AtlrU8 azimuthalCount = 16; // number of longitude lines, MUST be a power of 2!
@@ -325,26 +325,26 @@ static AtlrU8 initGooch()
       const AtlrU64 idx = (um + j) * 6;
       
       indices[idx]     = um + j;
-      indices[idx + 1] = up + j; 
-      indices[idx + 2] = um + v;
+      indices[idx + 2] = up + j; 
+      indices[idx + 1] = um + v;
       indices[idx + 3] = um + v;
-      indices[idx + 4] = up + j;
-      indices[idx + 5] = up + v;
+      indices[idx + 5] = up + j;
+      indices[idx + 4] = up + v;
     }
   }
   for (AtlrU8 j = 0; j < azimuthalCount; j++)
   {
     const AtlrU64 idx = e + j * 3;  
     indices[idx]     = d;
-    indices[idx + 1] = j; 
-    indices[idx + 2] = ((j + 1) & (azimuthalCount - 1));
+    indices[idx + 2] = j; 
+    indices[idx + 1] = ((j + 1) & (azimuthalCount - 1));
   }
   for (AtlrU8 j = 0; j < azimuthalCount; j++)
   {
     const AtlrU64 idx = e + (j + azimuthalCount) * 3;  
     indices[idx]     = d - azimuthalCount + ((j + 1) & (azimuthalCount - 1));
-    indices[idx + 1] = d - azimuthalCount + j;
-    indices[idx + 2] = d + 1;
+    indices[idx + 2] = d - azimuthalCount + j;
+    indices[idx + 1] = d + 1;
   }
 
   if (!atlrInitMesh(&sphereMesh, sizeof(vertices), vertices, sizeof(indices) / sizeof(AtlrU16), indices, &device, &singleRecordCommandContext))
