@@ -295,8 +295,11 @@ AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffer
 					 const AtlrDevice*);
 AtlrU8 atlrBeginCommandRecording(const VkCommandBuffer, const VkCommandBufferUsageFlags);
 AtlrU8 atlrEndCommandRecording(const VkCommandBuffer);
-AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrU32 queueFamilyIndex,
-					  const AtlrDevice* restrict);
+#ifdef ATLR_DEBUG
+void atlrBeginCommandLabel(const VkCommandBuffer, const char* restrict labelName, const float* restrict color4, const AtlrInstance* restrict instance);
+void atlrEndCommandLabel(const VkCommandBuffer, const AtlrInstance* restrict instance);
+#endif
+AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict, const AtlrU32 queueFamilyIndex, const AtlrDevice* restrict);
 void atlrDeinitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrBeginSingleRecordCommands(VkCommandBuffer* restrict, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrEndSingleRecordCommands(const VkCommandBuffer, const AtlrSingleRecordCommandContext* restrict);

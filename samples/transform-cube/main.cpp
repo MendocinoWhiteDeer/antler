@@ -332,9 +332,18 @@ int main()
 
     // draw scene
     vkCmdBindPipeline(commandBuffer, pipeline.bindPoint, pipeline.pipeline);
+#ifdef ATLR_DEBUG
+    {
+      const float color[4] = {0.2f, 0.2f, 0.9f, 1.0f};
+      atlrBeginCommandLabel(commandBuffer, "Cube draw", color, &instance);
+    }
+#endif
     atlrBindMesh(&cubeMesh, commandBuffer);
     vkCmdPushConstants(commandBuffer, pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(WorldTransform), &world);
     atlrDrawMesh(&cubeMesh, commandBuffer);
+#ifdef ATLR_DEBUG
+    atlrEndCommandLabel(commandBuffer, &instance);
+#endif
 
     // imgui
     imguiContext.bind(commandBuffer, commandContext.currentFrame);

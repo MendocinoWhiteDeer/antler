@@ -325,6 +325,11 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
   
   if (!verticesSize || !indicesSize) return;
 
+#ifdef ATLR_DEBUG
+  const float color[4] = {0.2f, 0.9f, 0.9f, 1.0f};
+  atlrBeginCommandLabel(commandBuffer, "Imgui draw", color, this->device->instance);
+#endif
+  
   AtlrU32* vertexCount = &this->vertexCounts[currentFrame];
   AtlrBuffer* vertexBuffer = &this->vertexBuffers[currentFrame];
   if (drawData->TotalVtxCount != *vertexCount)
@@ -417,4 +422,8 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
 
     vertexOffset += cmdList->VtxBuffer.Size;
   }
+
+#ifdef ATLR_DEBUG
+  atlrEndCommandLabel(commandBuffer, this->device->instance);
+#endif
 }

@@ -94,6 +94,31 @@ AtlrU8 atlrEndCommandRecording(const VkCommandBuffer commandBuffer)
   return 1;
 }
 
+#ifdef ATLR_DEBUG
+
+void atlrBeginCommandLabel(const VkCommandBuffer commandBuffer, const char* restrict labelName, const float* restrict color4, const AtlrInstance* restrict instance)
+{
+  const VkDebugUtilsLabelEXT label =
+  {
+    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+    .pNext = 0,
+    .pLabelName = labelName,
+    .color = {color4[0], color4[1], color4[2], color4[3]}
+  };
+  PFN_vkCmdBeginDebugUtilsLabelEXT pfnBegin =
+    (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(instance->instance, "vkCmdBeginDebugUtilsLabelEXT");
+  pfnBegin(commandBuffer, &label);
+}
+
+void atlrEndCommandLabel(const VkCommandBuffer commandBuffer, const AtlrInstance* restrict instance)
+{
+  PFN_vkCmdEndDebugUtilsLabelEXT pfnEnd =
+    (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(instance->instance, "vkCmdEndDebugUtilsLabelEXT");
+  pfnEnd(commandBuffer);
+}
+
+#endif
+
 AtlrU8 atlrInitSingleRecordCommandContext(AtlrSingleRecordCommandContext* restrict commandContext, const AtlrU32 queueFamilyIndex,
 					  const AtlrDevice* restrict device)
 {

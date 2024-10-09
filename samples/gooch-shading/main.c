@@ -434,7 +434,13 @@ int main()
     }
     const VkCommandBuffer commandBuffer = atlrGetFrameCommandContextCommandBufferHostGLFW(&commandContext); 
     
-     // start offscreen render pass
+    // start offscreen render pass
+#ifdef ATLR_DEBUG
+    {
+      const float color[4] = {0.9f, 0.2f, 0.2f, 1.0f};
+      atlrBeginCommandLabel(commandBuffer, "Offscreen render pass", color, &instance);
+    }
+#endif
     atlrOffscreenCanvasBeginRenderPass(&offscreenCanvas, commandBuffer);
 
     // update camera
@@ -444,13 +450,31 @@ int main()
 
     // draw sphere with gooch lighting
     vkCmdBindPipeline(commandBuffer, goochPipeline.bindPoint, goochPipeline.pipeline);
+#ifdef ATLR_DEBUG
+    {
+      const float color[4] = {0.2f, 0.9f, 0.9f, 1.0f};
+      atlrBeginCommandLabel(commandBuffer, "Sphere draw", color, &instance);
+    }
+#endif
     atlrBindMesh(&sphereMesh, commandBuffer);
     atlrDrawMesh(&sphereMesh, commandBuffer);
+#ifdef ATLR_DEBUG
+    atlrEndCommandLabel(commandBuffer, &instance);
+#endif
 
-     // end offscreen render pass
+    // end offscreen render pass
     atlrOffscreenCanvasEndRenderPass(commandBuffer);
+#ifdef ATLR_DEBUG
+    atlrEndCommandLabel(commandBuffer, &instance);
+#endif
 
     // begin frame render pass
+#ifdef ATLR_DEBUG
+    {
+      const float color[4] = {0.2f, 0.2f, 0.9f, 1.0f};
+      atlrBeginCommandLabel(commandBuffer, "Swapchain render pass", color, &instance);
+    }
+#endif
     if (!atlrFrameCommandContextBeginRenderPassHostGLFW(&commandContext))
     {
       ATLR_FATAL_MSG("atlrFrameCommandContextBeginRenderPassHostGLFW returned 0.");
@@ -460,8 +484,17 @@ int main()
     // give the sphere some edges
     vkCmdBindDescriptorSets(commandBuffer, edgeDetectPipeline.bindPoint, edgeDetectPipeline.layout, 0, 1, descriptorSets + commandContext.currentFrame, 0, NULL);
     vkCmdBindPipeline(commandBuffer, edgeDetectPipeline.bindPoint, edgeDetectPipeline.pipeline);
+#ifdef ATLR_DEBUG
+    {
+      const float color[4] = {0.2f, 0.9f, 0.9f, 1.0f};
+      atlrBeginCommandLabel(commandBuffer, "Edge detection", color, &instance);
+    }
+#endif
     vkCmdBindIndexBuffer(commandBuffer, edgeDetectIndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
     vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
+#ifdef ATLR_DEBUG
+    atlrEndCommandLabel(commandBuffer, &instance);
+#endif
 
     // end frame render pass
     if (!atlrFrameCommandContextEndRenderPassHostGLFW(&commandContext))
@@ -469,6 +502,9 @@ int main()
       ATLR_FATAL_MSG("atlrFrameCommandContextEndRenderPassHostGLFW returned 0.");
       return -1;
     }
+#ifdef ATLR_DEBUG
+    atlrEndCommandLabel(commandBuffer, &instance);
+#endif
     
     // end recording
     if (!atlrEndFrameCommandsHostGLFW(&commandContext))

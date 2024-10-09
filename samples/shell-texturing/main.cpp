@@ -502,6 +502,13 @@ int main()
     // bind camera descriptor set
     vkCmdBindDescriptorSets(commandBuffer, pipeline->bindPoint, pipeline->layout, 0, 1, camera.descriptorSets + commandContext.currentFrame, 0, NULL);
 
+#ifdef ATLR_DEBUG
+    {
+      const float color[4] = {0.2f, 0.2f, 0.9f, 1.0f};
+      atlrBeginCommandLabel(commandBuffer, "Shells draw", color, &instance);
+    }
+#endif
+
     // update shell data
     memcpy(shellUniformBuffers[commandContext.currentFrame].data, &shellUniformData, sizeof(shellUniformData));
     // bind shell descriptor set
@@ -517,6 +524,10 @@ int main()
     atlrBindMesh(msh, commandBuffer);
     vkCmdPushConstants(commandBuffer, pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(WorldTransform), &world);
     atlrDrawMesh(msh, commandBuffer);
+
+#ifdef ATLR_DEBUG
+    atlrEndCommandLabel(commandBuffer, &instance);
+#endif
 
     // imgui
     imguiContext.bind(commandBuffer, commandContext.currentFrame);
