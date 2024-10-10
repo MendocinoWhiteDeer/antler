@@ -231,6 +231,9 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       ATLR_ERROR_MSG("atlrInitRenderPass returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    atlrSetRenderPassName(&swapchain->renderPass, "Swapchain render pass");
+#endif
   }
 
   VkFramebuffer* framebuffers = malloc(imageCount * sizeof(VkFramebuffer));

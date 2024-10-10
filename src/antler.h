@@ -285,14 +285,14 @@ AtlrU8 atlrSetDeviceCriterion(AtlrDeviceCriterion* restrict criteria, AtlrDevice
 AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict, const AtlrInstance* restrict, const AtlrDeviceCriterion* restrict);
 void atlrDeinitDeviceHost(AtlrDevice* restrict);
 #endif
+#ifdef ATLR_DEBUG
+void atlrSetObjectName(const VkObjectType objectType, const AtlrU64 objectHandle, const char* restrict objectName, const AtlrDevice* restrict);
+#endif
 
 // commands.c
-AtlrU8 atlrInitCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags, const AtlrU32 queueFamilyIndex,
-				   const AtlrDevice* restrict);
-void atlrDeinitCommandPool(const VkCommandPool,
-			   const AtlrDevice* restrict);
-AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffers, AtlrU32 commandBufferCount, const VkCommandPool,
-					 const AtlrDevice*);
+AtlrU8 atlrInitCommandPool(VkCommandPool* restrict, const VkCommandPoolCreateFlags, const AtlrU32 queueFamilyIndex, const AtlrDevice* restrict);
+void atlrDeinitCommandPool(const VkCommandPool, const AtlrDevice* restrict);
+AtlrU8 atlrAllocatePrimaryCommandBuffers(VkCommandBuffer* restrict commandBuffers, AtlrU32 commandBufferCount, const VkCommandPool, const AtlrDevice*);
 AtlrU8 atlrBeginCommandRecording(const VkCommandBuffer, const VkCommandBufferUsageFlags);
 AtlrU8 atlrEndCommandRecording(const VkCommandBuffer);
 #ifdef ATLR_DEBUG
@@ -423,6 +423,9 @@ AtlrU8 atlrInitRenderPass(AtlrRenderPass* restrict,
 			  const AtlrU32 dependencyCount, const VkSubpassDependency* restrict dependencies,
 			  const AtlrDevice* restrict);
 void atlrDeinitRenderPass(const AtlrRenderPass* restrict);
+#ifdef ATLR_DEBUG
+void atlrSetRenderPassName(const AtlrRenderPass* restrict, const char* restrict renderPassName);
+#endif
 void atlrBeginRenderPass(const AtlrRenderPass* restrict,
 			 const VkCommandBuffer, const VkFramebuffer, const VkExtent2D* restrict);
 void atlrEndRenderPass(const VkCommandBuffer);

@@ -522,3 +522,20 @@ void atlrDeinitDeviceHost(AtlrDevice* device)
   atlrLog(ATLR_LOG_INFO, "Done deinitializing antler device.");
 }
 #endif
+
+#ifdef ATLR_DEBUG
+void atlrSetObjectName(const VkObjectType objectType, const AtlrU64 objectHandle, const char* restrict objectName, const AtlrDevice* restrict device)
+{
+  const VkDebugUtilsObjectNameInfoEXT nameInfo =
+  {
+    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+    .pNext = NULL,
+    .objectType = objectType,
+    .objectHandle = objectHandle,
+    .pObjectName = objectName
+  };
+  PFN_vkSetDebugUtilsObjectNameEXT pfnSetName =
+    (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(device->instance->instance, "vkSetDebugUtilsObjectNameEXT");
+  pfnSetName(device->logical, &nameInfo);
+}
+#endif

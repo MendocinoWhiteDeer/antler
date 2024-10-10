@@ -153,6 +153,13 @@ void atlrDeinitRenderPass(const AtlrRenderPass* restrict renderPass)
   vkDestroyRenderPass(device->logical, renderPass->renderPass, device->instance->allocator);
 }
 
+#ifdef ATLR_DEBUG
+void atlrSetRenderPassName(const AtlrRenderPass* restrict renderPass, const char* restrict renderPassName)
+{
+  atlrSetObjectName(VK_OBJECT_TYPE_RENDER_PASS, (AtlrU64)renderPass->renderPass, renderPassName, renderPass->device); 
+}
+#endif
+
 void atlrBeginRenderPass(const AtlrRenderPass* restrict renderPass,
 			 const VkCommandBuffer commandBuffer, const VkFramebuffer framebuffer, const VkExtent2D* restrict extent)
 {
