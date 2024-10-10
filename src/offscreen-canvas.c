@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "offscreen-canvas.h"
+#include <stdio.h>
 
 AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExtent2D* restrict extent, const VkFormat colorFormat, const AtlrU8 initRenderPass, const VkClearValue* restrict clearColor,
 			       const AtlrDevice* restrict device)
@@ -39,6 +40,9 @@ AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExt
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetImageName(&canvas->colorImage, "Offscreen Canvas Framebuffer Color Image");
+#endif
 
   // depth image
   const VkFormat depthFormat = atlrGetSupportedDepthImageFormat(device->physical, tiling);
@@ -54,6 +58,9 @@ AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExt
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetImageName(&canvas->depthImage, "Offscreen Canvas Framebuffer Depth Image");
+#endif
 
   if (initRenderPass)
   {
@@ -74,6 +81,9 @@ AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExt
       ATLR_ERROR_MSG("atlrInitRenderPass returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    atlrSetRenderPassName(&canvas->renderPass, "Offsceen Canvas Render Pass");
+#endif
   }
 
   const VkImageView framebufferAttachments[2] =
@@ -98,6 +108,11 @@ AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExt
     ATLR_ERROR_MSG("vkCreateFrameBuffer did not return VK_SUCCESS.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+    char framebufferString[64];
+    sprintf(framebufferString, "Offsceen Canvas Framebuffer");
+    atlrSetObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, (AtlrU64)canvas->framebuffer, framebufferString, device);
+#endif
 
   return 1;
 }

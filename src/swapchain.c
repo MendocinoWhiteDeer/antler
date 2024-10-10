@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "antler.h"
+#include <stdio.h>
 
 
 #ifdef ATLR_BUILD_HOST_GLFW
@@ -196,7 +197,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     return 0;
   }
 #ifdef ATLR_DEBUG
-  atlrSetImageName(&swapchain->colorImage, "Swapchain framebuffer multisampled color image");
+  atlrSetImageName(&swapchain->colorImage, "Swapchain Framebuffer MSAA Color Image");
 #endif
 
   // depth image
@@ -214,7 +215,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     return 0;
   }
 #ifdef ATLR_DEBUG
-  atlrSetImageName(&swapchain->depthImage, "Swapchain framebuffer depth image");
+  atlrSetImageName(&swapchain->depthImage, "Swapchain Framebuffer Depth Image");
 #endif
 
   if (initRenderPass)
@@ -238,7 +239,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       return 0;
     }
 #ifdef ATLR_DEBUG
-    atlrSetRenderPassName(&swapchain->renderPass, "Swapchain render pass");
+    atlrSetRenderPassName(&swapchain->renderPass, "Swapchain Render Pass");
 #endif
   }
 
@@ -268,6 +269,11 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       ATLR_ERROR_MSG("vkCreateFramebuffer did not return VK_SUCCESS.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    char framebufferString[64];
+    sprintf(framebufferString, "Swapchain Framebuffer ; Index %d", i);
+    atlrSetObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, (AtlrU64)framebuffers[i], framebufferString, device);
+#endif
   }
   swapchain->framebuffers = framebuffers;
 
