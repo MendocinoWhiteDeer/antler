@@ -190,6 +190,9 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
 
     atlrDeinitSpirVBinary(&bin);
   }
+#ifdef ATLR_DEBUG
+  atlrSetObjectName(VK_OBJECT_TYPE_SHADER_MODULE, (AtlrU64)vertexModule, "Imgui Vertex Shader Module", device);
+#endif
   
   const char* fragmentShaderSource =
     "#version 460\n"
@@ -223,6 +226,9 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
 
     atlrDeinitSpirVBinary(&bin);
   }
+#ifdef ATLR_DEBUG
+  atlrSetObjectName(VK_OBJECT_TYPE_SHADER_MODULE, (AtlrU64)fragmentModule, "Imgui Fragment Shader Module", device);
+#endif
   
   VkPipelineShaderStageCreateInfo stageInfos[2] =
   {

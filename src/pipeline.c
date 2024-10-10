@@ -59,6 +59,13 @@ VkShaderModule atlrInitShaderModule(const char* restrict path, const AtlrDevice*
     free(bytes);
     return VK_NULL_HANDLE;
   }
+#ifdef ATLR_DEBUG
+  char* shaderString = malloc(strlen(path) + 64);
+  sprintf(shaderString, "Shader Module; Path: %s", path);
+  atlrSetObjectName(VK_OBJECT_TYPE_SHADER_MODULE, (AtlrU64)module, shaderString, device);
+  free(shaderString);
+#endif
+  
 
   free(bytes);
   return module;

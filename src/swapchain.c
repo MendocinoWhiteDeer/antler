@@ -168,8 +168,6 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     atlrLog(ATLR_LOG_ERROR, "vkCreateSwapchainKHR (second call) did not return VK_SUCCESS.");
     return 0;
   }
-  swapchain->imageCount = imageCount;
-  swapchain->images = images;
   
   VkImageView* imageViews = malloc(imageCount * sizeof(VkImageView));
   for (AtlrU32 i = 0; i < imageCount; i++)
@@ -181,7 +179,18 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       return 0;
     }
     imageViews[i] = imageView;
+
+#ifdef ATLR_DEBUG
+    char imageString[64];
+    char imageViewString[64];
+    sprintf(imageString, "Swapchain Image ; Index %d ; VkImage", i);
+    sprintf(imageViewString, "Swapchain Image ; Index %d ; VkImageView", i);
+    atlrSetObjectName(VK_OBJECT_TYPE_IMAGE, (AtlrU64)images[i], imageString, device);
+    atlrSetObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, (AtlrU64)imageViews[i], imageViewString, device);
+#endif
   }
+  swapchain->imageCount = imageCount;
+  swapchain->images = images;
   swapchain->imageViews = imageViews;
 
   const VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
