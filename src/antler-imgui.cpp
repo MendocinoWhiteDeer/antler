@@ -64,6 +64,9 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
     throw std::runtime_error("atlrInitImage returned 0.");
     return;
   }
+#ifdef ATLR_DEBUG
+    atlrSetImageName(&this->fontImage, "Imgui Font Image");
+#endif
 
   AtlrBuffer stagingBuffer;
   if (!atlrInitStagingBuffer(&stagingBuffer, fontImageSize, device))

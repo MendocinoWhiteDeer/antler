@@ -195,6 +195,9 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetImageName(&swapchain->colorImage, "Swapchain framebuffer multisampled color image");
+#endif
 
   // depth image
   const VkFormat depthFormat = atlrGetSupportedDepthImageFormat(device->physical, tiling);
@@ -210,6 +213,9 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetImageName(&swapchain->depthImage, "Swapchain framebuffer depth image");
+#endif
 
   if (initRenderPass)
   {

@@ -362,6 +362,9 @@ AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 hei
 AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath,
 				    const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 void atlrDeinitImage(const AtlrImage* restrict);
+#ifdef ATLR_DEBUG
+void atlrSetImageName(const AtlrImage* restrict, const char* restrict imageName);
+#endif
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
 
 // descriptor.c

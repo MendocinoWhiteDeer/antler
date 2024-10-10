@@ -119,6 +119,9 @@ static AtlrU8 initDescriptor(const char* restrict imageTexturePath)
       ATLR_ERROR_MSG("atlrInitImageRgbaTextureFromFile returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    atlrSetImageName(&rgbaImageTexture, imageTexturePath);
+#endif
     
     const VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[2] =
     {

@@ -296,6 +296,36 @@ void atlrDeinitImage(const AtlrImage* restrict image)
   vkDestroyImage(device->logical, image->image, device->instance->allocator);
 }
 
+#ifdef ATLR_DEBUG
+void atlrSetImageName(const AtlrImage* restrict image, const char* restrict imageName)
+{
+  size_t n = strlen(imageName) + 1;
+  const char* imageFooter = " ; VkImage";
+  const char* memoryFooter = " ; VkDeviceMemory";
+  const char* imageViewFooter = " ; VkImageView";
+  
+  char* imageString = malloc(n + strlen(imageFooter));
+  strcpy(imageString, imageName);
+  strcat(imageString, imageFooter);
+
+  char* memoryString = malloc(n + strlen(memoryFooter));
+  strcpy(memoryString, imageName);
+  strcat(memoryString, memoryFooter);
+
+  char* imageViewString = malloc(n + strlen(imageViewFooter));
+  strcpy(imageViewString, imageName);
+  strcat(imageViewString, imageViewFooter);
+  
+  atlrSetObjectName(VK_OBJECT_TYPE_IMAGE, (AtlrU64)image->image, imageString, image->device);
+  atlrSetObjectName(VK_OBJECT_TYPE_DEVICE_MEMORY, (AtlrU64)image->memory, memoryString, image->device);
+  atlrSetObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, (AtlrU64)image->imageView, imageViewString, image->device);
+
+  free(imageString);
+  free(memoryString);
+  free(imageViewString);
+}
+#endif
+
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
 {
   for (AtlrU32 i = 0; i < sizeof(depthFormatChoices) / sizeof(VkFormat); i++)
