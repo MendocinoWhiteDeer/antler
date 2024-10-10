@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "antler.h"
+#include <stdio.h>
 
 AtlrU8 atlrInitCommandPool(VkCommandPool* restrict commandPool, const VkCommandPoolCreateFlags flags, const AtlrU32 queueFamilyIndex,
 				   const AtlrDevice* restrict device)
@@ -290,6 +291,18 @@ AtlrU8 atlrInitFrameCommandContextHostGLFW(AtlrFrameCommandContext* restrict com
       ATLR_ERROR_MSG("vkCreateFence did not return VK_SUCCESS.");
       return 0;
     }
+
+#ifdef ATLR_DEBUG
+    char imageAvailableSemaphoreString[64];
+    char renderFinishedSemaphoreString[64];
+    char fenceString[64];
+    sprintf(imageAvailableSemaphoreString, "Frame Context Image Available Semaphore ; Frame %d", i);
+    sprintf(renderFinishedSemaphoreString, "Frame Context Render Finished Semaphore ; Frame %d", i);
+    sprintf(fenceString, "Frame Context In-Flight Fence ; Frame %d", i);
+    atlrSetObjectName(VK_OBJECT_TYPE_SEMAPHORE, (AtlrU64)frame->imageAvailableSemaphore, imageAvailableSemaphoreString, device);
+    atlrSetObjectName(VK_OBJECT_TYPE_SEMAPHORE, (AtlrU64)frame->renderFinishedSemaphore, renderFinishedSemaphoreString, device);
+    atlrSetObjectName(VK_OBJECT_TYPE_FENCE, (AtlrU64)frame->inFlightFence, fenceString, device);
+#endif
   }
   commandContext->currentFrame = 0;
   commandContext->frameCount = frameCount;
