@@ -122,6 +122,9 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
     throw std::runtime_error("vkCreateSampler did not return VK_SUCCESS.");
     return;
   }
+#ifdef ATLR_DEBUG
+    atlrSetObjectName(VK_OBJECT_TYPE_SAMPLER, (AtlrU64)this->fontSampler, "Imgui Font Sampler", device);
+#endif
 
   const VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     
@@ -131,6 +134,9 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
     throw std::runtime_error("atlrInitDescriptorSetLayout returned 0.");
     return;
   }
+#ifdef ATLR_DEBUG
+  atlrSetObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (AtlrU64)this->descriptorSetLayout.layout, "Imgui Font Descriptor Layout", device);
+#endif
 
   VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, frameCount);
   if (!atlrInitDescriptorPool(&this->descriptorPool, frameCount, 1, &poolSize, device))
@@ -138,6 +144,9 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
     throw std::runtime_error("atlrInitDescriptorPool returned 0.");
     return;
   }
+#ifdef ATLR_DEBUG
+  atlrSetObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, (AtlrU64)this->descriptorPool.pool, "Imgui Font Descriptor Pool", device);
+#endif
 
   this->descriptorSets.resize(frameCount);
 
@@ -153,7 +162,15 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
   std::vector<VkWriteDescriptorSet> descriptorWrites;
   descriptorWrites.resize(frameCount);
   for (AtlrU8 i = 0; i < frameCount; i++)
+  {
+#ifdef ATLR_DEBUG
+    char descriptorString[64];
+    sprintf(descriptorString, "Imgui Font Descriptor Set ; Frame %d", i);
+    atlrSetObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET, (AtlrU64)this->descriptorSets[i], descriptorString, device);
+#endif
+    
     descriptorWrites[i] = atlrWriteImageDescriptorSet(descriptorSets[i], 0, descriptorType, &imageInfo);
+  }
   vkUpdateDescriptorSets(device->logical, frameCount, descriptorWrites.data(), 0, NULL);
 
   const char* vertexShaderSource =

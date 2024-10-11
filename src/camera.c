@@ -54,19 +54,25 @@ AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict camera,
   const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   const VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, stages);
+  const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = atlrInitDescriptorSetLayoutBinding(0, type, stages);
   if (!atlrInitDescriptorSetLayout(&camera->descriptorSetLayout, 1, &descriptorSetLayoutBinding, device))
   {
     ATLR_ERROR_MSG("atlrInitDescriptorSetLayout returned 0.");
     return 0;
   }
-
+#ifdef ATLR_DEBUG
+  atlrSetObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (AtlrU64)camera->descriptorSetLayout.layout, "Camera Descriptor Layout", device);
+#endif
+  
   const VkDescriptorPoolSize poolSize = atlrInitDescriptorPoolSize(type, frameCount);
   if (!atlrInitDescriptorPool(&camera->descriptorPool, frameCount, 1, &poolSize, device))
   {
     ATLR_ERROR_MSG("atlrInitDescriptorPool returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetObjectName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, (AtlrU64)camera->descriptorPool.pool, "Camera Descriptor Pool", device);
+#endif
 
   camera->descriptorSets = malloc(frameCount * sizeof(VkDescriptorSet));
   VkDescriptorSetLayout* setLayouts = malloc(frameCount * sizeof(VkDescriptorSetLayout));
@@ -83,6 +89,12 @@ AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict camera,
   VkWriteDescriptorSet* descriptorWrites = malloc(frameCount * sizeof(VkWriteDescriptorSet));
   for (AtlrU8 i = 0; i < frameCount; i++)
   {
+#ifdef ATLR_DEBUG
+    char descriptorString[64];
+    sprintf(descriptorString, "Camera Descriptor Set ; Frame %d", i);
+    atlrSetObjectName(VK_OBJECT_TYPE_DESCRIPTOR_SET, (AtlrU64)camera->descriptorSets[i], descriptorString, device);
+#endif
+    
     bufferInfos[i] = atlrInitDescriptorBufferInfo(camera->uniformBuffers + i, sizeof(camera->uniformData));
     descriptorWrites[i] = atlrWriteBufferDescriptorSet(camera->descriptorSets[i], 0, type, bufferInfos + i);
   }
