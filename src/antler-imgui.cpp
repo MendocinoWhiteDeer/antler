@@ -359,7 +359,12 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
 	throw std::runtime_error("atlrInitBuffer returned 0.");
 	return;
       }
-       atlrMapBuffer(vertexBuffer, 0, verticesSize, 0);
+      atlrMapBuffer(vertexBuffer, 0, verticesSize, 0);
+#ifdef ATLR_DEBUG
+      char bufferString[64];
+      sprintf(bufferString, "Imgui Vertex Buffer ; Frame %d", currentFrame);
+      atlrSetBufferName(vertexBuffer, bufferString);
+#endif
     }
   }
 
@@ -384,6 +389,11 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
 	return;
       }
       atlrMapBuffer(indexBuffer, 0, indicesSize, 0);
+#ifdef ATLR_DEBUG
+      char bufferString[64];
+      sprintf(bufferString, "Imgui Index Buffer ; Frame %d", currentFrame);
+      atlrSetBufferName(indexBuffer, bufferString);
+#endif
     }
   }
 

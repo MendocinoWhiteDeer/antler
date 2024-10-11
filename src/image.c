@@ -52,9 +52,7 @@ VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice physical, const
   return getSupportedImageFormat(physical, sizeof(depthFormatChoices) / sizeof(VkFormat), depthFormatChoices, tiling, features);
 }
 
-VkImageView atlrInitImageView(const VkImage image,
-			      const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspects, const AtlrU32 layerCount,
-			      const AtlrDevice* restrict device)
+VkImageView atlrInitImageView(const VkImage image, const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspects, const AtlrU32 layerCount, const AtlrDevice* restrict device)
 {
   const VkImageViewCreateInfo imageViewInfo =
   {
@@ -90,14 +88,12 @@ VkImageView atlrInitImageView(const VkImage image,
   return imageView;
 }
 
-void atlrDeinitImageView(const VkImageView imageView,
-			 const AtlrDevice* restrict device)
+void atlrDeinitImageView(const VkImageView imageView, const AtlrDevice* restrict device)
 {
   vkDestroyImageView(device->logical, imageView, device->instance->allocator);
 }
 
-AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout,
-				 const AtlrSingleRecordCommandContext* restrict commandContext)
+AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageLayout oldLayout, const VkImageLayout newLayout, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -235,8 +231,45 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
   return 1;
 }
 
-AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath,
-				    const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
+void atlrDeinitImage(const AtlrImage* restrict image)
+{
+  const AtlrDevice* device = image->device;
+  atlrDeinitImageView(image->imageView, device);
+  vkFreeMemory(device->logical, image->memory, device->instance->allocator);
+  vkDestroyImage(device->logical, image->image, device->instance->allocator);
+}
+
+#ifdef ATLR_DEBUG
+void atlrSetImageName(const AtlrImage* restrict image, const char* restrict imageName)
+{
+  size_t n = strlen(imageName) + 1;
+  const char* imageFooter = " ; VkImage";
+  const char* memoryFooter = " ; VkDeviceMemory";
+  const char* imageViewFooter = " ; VkImageView";
+  
+  char* imageString = malloc(n + strlen(imageFooter));
+  strcpy(imageString, imageName);
+  strcat(imageString, imageFooter);
+
+  char* memoryString = malloc(n + strlen(memoryFooter));
+  strcpy(memoryString, imageName);
+  strcat(memoryString, memoryFooter);
+
+  char* imageViewString = malloc(n + strlen(imageViewFooter));
+  strcpy(imageViewString, imageName);
+  strcat(imageViewString, imageViewFooter);
+  
+  atlrSetObjectName(VK_OBJECT_TYPE_IMAGE, (AtlrU64)image->image, imageString, image->device);
+  atlrSetObjectName(VK_OBJECT_TYPE_DEVICE_MEMORY, (AtlrU64)image->memory, memoryString, image->device);
+  atlrSetObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, (AtlrU64)image->imageView, imageViewString, image->device);
+
+  free(imageString);
+  free(memoryString);
+  free(imageViewString);
+}
+#endif
+
+AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath, const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   int width, height, channels;
   stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
@@ -287,44 +320,6 @@ AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath,
 
   return 1;
 }
-
-void atlrDeinitImage(const AtlrImage* restrict image)
-{
-  const AtlrDevice* device = image->device;
-  atlrDeinitImageView(image->imageView, device);
-  vkFreeMemory(device->logical, image->memory, device->instance->allocator);
-  vkDestroyImage(device->logical, image->image, device->instance->allocator);
-}
-
-#ifdef ATLR_DEBUG
-void atlrSetImageName(const AtlrImage* restrict image, const char* restrict imageName)
-{
-  size_t n = strlen(imageName) + 1;
-  const char* imageFooter = " ; VkImage";
-  const char* memoryFooter = " ; VkDeviceMemory";
-  const char* imageViewFooter = " ; VkImageView";
-  
-  char* imageString = malloc(n + strlen(imageFooter));
-  strcpy(imageString, imageName);
-  strcat(imageString, imageFooter);
-
-  char* memoryString = malloc(n + strlen(memoryFooter));
-  strcpy(memoryString, imageName);
-  strcat(memoryString, memoryFooter);
-
-  char* imageViewString = malloc(n + strlen(imageViewFooter));
-  strcpy(imageViewString, imageName);
-  strcat(imageViewString, imageViewFooter);
-  
-  atlrSetObjectName(VK_OBJECT_TYPE_IMAGE, (AtlrU64)image->image, imageString, image->device);
-  atlrSetObjectName(VK_OBJECT_TYPE_DEVICE_MEMORY, (AtlrU64)image->memory, memoryString, image->device);
-  atlrSetObjectName(VK_OBJECT_TYPE_IMAGE_VIEW, (AtlrU64)image->imageView, imageViewString, image->device);
-
-  free(imageString);
-  free(memoryString);
-  free(imageViewString);
-}
-#endif
 
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict image)
 {

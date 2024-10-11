@@ -158,6 +158,9 @@ static AtlrU8 initHelloQuad()
     ATLR_ERROR_MSG("atlrInitMesh returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetMeshName(&quadMesh, "Quad");
+#endif
   
   atlrDeinitSingleRecordCommandContext(&singleRecordCommandContext);
 

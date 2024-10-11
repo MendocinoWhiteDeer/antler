@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "camera.h"
+#include <stdio.h>
 
 #ifdef ATLR_BUILD_HOST_GLFW
 AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict camera, const AtlrU8 frameCount, const float fov, const float nearPlane, const float farPlane,
@@ -43,6 +44,11 @@ AtlrU8 atlrInitPerspectiveCameraHostGLFW(AtlrPerspectiveCamera* restrict camera,
       ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    char bufferString[64];
+    sprintf(bufferString, "Camera Uniform Buffer ; Frame %d", i);
+    atlrSetBufferName(camera->uniformBuffers + i, bufferString);
+#endif
   }
 
   const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

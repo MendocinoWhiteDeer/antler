@@ -30,7 +30,8 @@ static AtlrFrameCommandContext commandContext;
 static AtlrSingleRecordCommandContext singleRecordCommandContext;
 static struct
 {
-  float time;            float padding;
+  float time;
+  float padding;
   float resolution[2];
   
 } uniformBufferData;
@@ -109,6 +110,11 @@ static AtlrU8 initDescriptor(const char* restrict imageTexturePath)
       ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    char bufferString[64];
+    sprintf(bufferString, "Fragment Shader Client Uniform Buffer ; Frame %d", i);
+    atlrSetBufferName(uniformBuffers + i, bufferString);
+#endif
   }
 
   if (imageTexturePath)
@@ -388,6 +394,9 @@ static AtlrU8 initFragmentShaderClient(const char* restrict fragmentShaderPath, 
     ATLR_ERROR_MSG("Failed to init and stage index buffer.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetBufferName(&indexBuffer, "Quad Index Buffer");
+#endif
 
   if(!initDescriptor(imageTexturePath))
   {

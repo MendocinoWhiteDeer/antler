@@ -27,6 +27,7 @@ extern "C"
 }
 #include "../../lib/imgui/imgui.h"
 #include "../../src/antler-imgui.hpp"
+#include <cstdio>
   
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -98,6 +99,11 @@ static AtlrU8 initDescriptor()
       ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    char shellBufferString[64];
+    sprintf(shellBufferString, "Shell Uniform Buffer ; Frame %d", i);
+    atlrSetBufferName(shellUniformBuffers + i, shellBufferString);
+#endif
 
     if (!atlrInitBuffer(grassUniformBuffers + i, sizeof(grassUniformData), usage, memoryProperties, &device))
     {
@@ -109,6 +115,11 @@ static AtlrU8 initDescriptor()
       ATLR_ERROR_MSG("atlrMapBuffer returned 0.");
       return 0;
     }
+#ifdef ATLR_DEBUG
+    char grassBufferString[64];
+    sprintf(grassBufferString, "Grass Uniform Buffer ; Frame %d", i);
+    atlrSetBufferName(grassUniformBuffers + i, grassBufferString);
+#endif
   }
 
   const VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -298,42 +309,31 @@ static AtlrU8 initShellTexturing()
   // plane mesh
   {
     const AtlrVec3 positions[4] =
-      {
-	{{-0.5f, -0.5f,  0.0f}},
-	{{ 0.5f, -0.5f,  0.0f}},
-	{{ 0.5f,  0.5f,  0.0f}},
-	{{-0.5f,  0.5f,  0.0f}}
-      };
+    {
+      {{-0.5f, -0.5f,  0.0f}},
+      {{ 0.5f, -0.5f,  0.0f}},
+      {{ 0.5f,  0.5f,  0.0f}},
+      {{-0.5f,  0.5f,  0.0f}}
+    };
     const AtlrVec3 normal = {{0.0f, 0.0f, 1.0f}};
     const Vertex vertices[4] =
-      {
-	// top face
-	(Vertex){.pos = positions[0], .normal = normal, .uv = {{0.0f, 0.0f}}},
-	(Vertex){.pos = positions[1], .normal = normal, .uv = {{1.0f, 0.0f}}},
-	(Vertex){.pos = positions[2], .normal = normal, .uv = {{1.0f, 1.0f}}},
-	(Vertex){.pos = positions[3], .normal = normal, .uv = {{0.0f, 1.0f}}}
-      }; 
-    const AtlrU16 indices[6] =
-      {
-	0, 2, 1, 3, 2, 0
-      };
-    if (!atlrInitMesh(&planeMesh, 4 * sizeof(Vertex), vertices, 6, indices, &device, &singleRecordCommandContext))
-      {
-	ATLR_ERROR_MSG("atlrInitMesh returned 0.");
-	return 0;
-      }
-
-    if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
-      {
-	ATLR_ERROR_MSG("atlrInitPerspectiveCameraHostGLFW returned 0.");
-	return 0;
-      }
     {
-      const AtlrVec3 eyePos = {{2.0f, 0.0f, 1.0f}};
-      const AtlrVec3 targetPos = {{0.0f, 0.0f, 0.0f}};
-      const AtlrVec3 worldUpDir = {{0.0f, 0.0f, 1.0f}};
-      atlrPerspectiveCameraLookAtHostGLFW(&camera, &eyePos, &targetPos, &worldUpDir);
+      // top face
+      (Vertex){.pos = positions[0], .normal = normal, .uv = {{0.0f, 0.0f}}},
+      (Vertex){.pos = positions[1], .normal = normal, .uv = {{1.0f, 0.0f}}},
+      (Vertex){.pos = positions[2], .normal = normal, .uv = {{1.0f, 1.0f}}},
+      (Vertex){.pos = positions[3], .normal = normal, .uv = {{0.0f, 1.0f}}}
+    }; 
+    const AtlrU16 indices[6] = {0, 2, 1, 3, 2, 0};
+    
+    if (!atlrInitMesh(&planeMesh, 4 * sizeof(Vertex), vertices, 6, indices, &device, &singleRecordCommandContext))
+    {
+      ATLR_ERROR_MSG("atlrInitMesh returned 0.");
+      return 0;
     }
+#ifdef ATLR_DEBUG
+    atlrSetMeshName(&planeMesh, "Plane");
+#endif
   }
   
   // sphere mesh
@@ -390,10 +390,25 @@ static AtlrU8 initShellTexturing()
     }
 
     if (!atlrInitMesh(&sphereMesh, sizeof(vertices), vertices, sizeof(indices) / sizeof(AtlrU16), indices, &device, &singleRecordCommandContext))
-      {
-	ATLR_ERROR_MSG("atlrInitMesh returned 0.");
-	return 0;
-      }
+    {
+      ATLR_ERROR_MSG("atlrInitMesh returned 0.");
+      return 0;
+    }
+#ifdef ATLR_DEBUG
+    atlrSetMeshName(&sphereMesh, "Sphere");
+#endif
+  }
+
+  if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
+  {
+    ATLR_ERROR_MSG("atlrInitPerspectiveCameraHostGLFW returned 0.");
+    return 0;
+  }
+  {
+    const AtlrVec3 eyePos = {{2.0f, 0.0f, 1.0f}};
+    const AtlrVec3 targetPos = {{0.0f, 0.0f, 0.0f}};
+    const AtlrVec3 worldUpDir = {{0.0f, 0.0f, 1.0f}};
+    atlrPerspectiveCameraLookAtHostGLFW(&camera, &eyePos, &targetPos, &worldUpDir);
   }
 
   if(!initDescriptor())

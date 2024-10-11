@@ -33,8 +33,7 @@ AtlrU8 atlrUniformBufferAlignment(AtlrU64* restrict aligned, const AtlrU64 offse
   return 1;
 }
 
-AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties,
-		      const AtlrDevice* device)
+AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkBufferUsageFlags usage, const VkMemoryPropertyFlags properties, const AtlrDevice* device)
 {
   buffer->device = device;
   
@@ -87,16 +86,37 @@ AtlrU8 atlrInitBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const VkB
   return 1;
 }
 
-AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size,
-		      const AtlrDevice* device)
+#ifdef ATLR_DEBUG
+void atlrSetBufferName(const AtlrBuffer* restrict buffer, const char* restrict bufferName)
+{
+  size_t n = strlen(bufferName) + 1;
+  const char* bufferFooter = " ; VkBuffer";
+  const char* memoryFooter = " ; VkDeviceMemory";
+  
+  char* bufferString = malloc(n + strlen(bufferFooter));
+  strcpy(bufferString, bufferName);
+  strcat(bufferString, bufferFooter);
+
+  char* memoryString = malloc(n + strlen(memoryFooter));
+  strcpy(memoryString, bufferName);
+  strcat(memoryString, memoryFooter);
+  
+  atlrSetObjectName(VK_OBJECT_TYPE_BUFFER, (AtlrU64)buffer->buffer, bufferString, buffer->device);
+  atlrSetObjectName(VK_OBJECT_TYPE_DEVICE_MEMORY, (AtlrU64)buffer->memory, memoryString, buffer->device);
+
+  free(bufferString);
+  free(memoryString);
+}
+#endif
+
+AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const AtlrDevice* device)
 {
   const VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   const VkMemoryPropertyFlags stagingMemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   return atlrInitBuffer(buffer, size, stagingUsage, stagingMemoryProperties, device);
 }
 
-AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size,
-		      const AtlrDevice* device)
+AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict buffer, const AtlrU64 size, const AtlrDevice* device)
 {
   const VkBufferUsageFlags readbackUsage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   const VkMemoryPropertyFlags readbackMemoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -171,8 +191,7 @@ AtlrU8 atlrReadBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const A
   return 1;
 }
 
-AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
-		      const AtlrSingleRecordCommandContext* restrict commandContext)
+AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -198,9 +217,7 @@ AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict
   return 1;
 }
 
-AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict image,
-			     const VkOffset2D* offset, const VkExtent2D* extent,
-			     const AtlrSingleRecordCommandContext* restrict commandContext)
+AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict image, const VkOffset2D* offset, const VkExtent2D* extent, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   VkCommandBuffer commandBuffer;
   if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
@@ -245,8 +262,7 @@ AtlrU8 atlrCopyBufferToImage(const AtlrBuffer* buffer, const AtlrImage* restrict
   return 1;
 }
 
-AtlrU8 atlrStageBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const void* restrict data,
-		       const AtlrSingleRecordCommandContext* restrict commandContext)
+AtlrU8 atlrStageBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, const void* restrict data, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   AtlrBuffer stagingBuffer;
   if (!atlrInitStagingBuffer(&stagingBuffer, size, buffer->device))
@@ -272,8 +288,7 @@ AtlrU8 atlrStageBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const 
   return 1;
 }
 
-AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
-			  const AtlrSingleRecordCommandContext* restrict commandContext)
+AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict buffer, const AtlrU64 offset, const AtlrU64 size, void* restrict data, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   AtlrBuffer readbackingBuffer;
   if (!atlrInitReadbackingBuffer(&readbackingBuffer, size, buffer->device))
@@ -331,6 +346,29 @@ void atlrDeinitMesh(AtlrMesh* restrict mesh)
   atlrDeinitBuffer(&mesh->vertexBuffer);
   atlrDeinitBuffer(&mesh->indexBuffer);
 }
+
+#ifdef ATLR_DEBUG
+void atlrSetMeshName(const AtlrMesh* restrict mesh, const char* restrict meshName)
+{
+  size_t n = strlen(meshName) + 1;
+  const char* vertexFooter = " ; Vertex Buffer";
+  const char* indexFooter = " ; Index Buffer";
+  
+  char* vertexString = malloc(n + strlen(vertexFooter));
+  strcpy(vertexString, meshName);
+  strcat(vertexString, vertexFooter);
+
+  char* indexString = malloc(n + strlen(indexFooter));
+  strcpy(indexString, meshName);
+  strcat(indexString, indexFooter);
+
+  atlrSetBufferName(&mesh->vertexBuffer, vertexString);
+  atlrSetBufferName(&mesh->indexBuffer, indexString);
+
+  free(vertexString);
+  free(indexString);
+}
+#endif
 
 void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer commandBuffer)
 {

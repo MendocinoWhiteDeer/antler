@@ -241,6 +241,9 @@ static AtlrU8 initTransformCube()
     ATLR_ERROR_MSG("atlrInitMesh returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetMeshName(&cubeMesh, "Cube");
+#endif
 
   if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
   {

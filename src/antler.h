@@ -319,52 +319,45 @@ VkCommandBuffer atlrGetFrameCommandContextCommandBufferHostGLFW(const AtlrFrameC
 
 // buffer.c
 AtlrU8 atlrUniformBufferAlignment(AtlrU64* restrict aligned, const AtlrU64 offset, const AtlrDevice* restrict);
-AtlrU8 atlrInitBuffer(AtlrBuffer* restrict, const AtlrU64 size, const VkBufferUsageFlags, const VkMemoryPropertyFlags,
-		      const AtlrDevice*);
-AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
-		      const AtlrDevice*);
-AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict, const AtlrU64 size,
-		      const AtlrDevice*);
+AtlrU8 atlrInitBuffer(AtlrBuffer* restrict, const AtlrU64 size, const VkBufferUsageFlags, const VkMemoryPropertyFlags, const AtlrDevice*);
+#ifdef ATLR_DEBUG
+void atlrSetBufferName(const AtlrBuffer* restrict buffer, const char* restrict bufferName);
+#endif
+AtlrU8 atlrInitStagingBuffer(AtlrBuffer* restrict, const AtlrU64 size, const AtlrDevice*);
+AtlrU8 atlrInitReadbackingBuffer(AtlrBuffer* restrict, const AtlrU64 size, const AtlrDevice*);
 void atlrDeinitBuffer(AtlrBuffer* restrict);
 AtlrU8 atlrMapBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags);
 void atlrUnmapBuffer(const AtlrBuffer* restrict);
 AtlrU8 atlrFlushBuffer(const AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size);
 AtlrU8 atlrWriteBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags, const void* restrict data);
 AtlrU8 atlrReadBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const VkMemoryMapFlags flags, void* restrict data);
-AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size,
-		      const AtlrSingleRecordCommandContext* restrict);
-AtlrU8 atlrCopyBufferToImage(const AtlrBuffer*, const AtlrImage* restrict,
-			     const VkOffset2D*, const VkExtent2D*,
-			     const AtlrSingleRecordCommandContext* restrict);
-AtlrU8 atlrStageBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const void* restrict data,
-		       const AtlrSingleRecordCommandContext* restrict);
-AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, void* restrict data,
-			  const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrCopyBuffer(const AtlrBuffer* restrict dst, const AtlrBuffer* restrict src, const AtlrU64 dstOffset, const AtlrU64 srcOffset, const AtlrU64 size, const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrCopyBufferToImage(const AtlrBuffer*, const AtlrImage* restrict, const VkOffset2D*, const VkExtent2D*, const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrStageBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, const void* restrict data, const AtlrSingleRecordCommandContext* restrict);
+AtlrU8 atlrReadbackBuffer(AtlrBuffer* restrict, const AtlrU64 offset, const AtlrU64 size, void* restrict data, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrInitMesh(AtlrMesh* restrict, const AtlrU64 verticesSize, const void* restrict vertices, const AtlrU32 indexCount, const AtlrU16* restrict indices,
 		    const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict);
 void atlrDeinitMesh(AtlrMesh* restrict mesh);
+#ifdef ATLR_DEBUG
+void atlrSetMeshName(const AtlrMesh* restrict mesh, const char* restrict meshName);
+#endif
 void atlrBindMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 void atlrDrawMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 
 // image.c
 VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice, const VkImageTiling);
-VkImageView atlrInitImageView(const VkImage,
-			      const VkImageViewType, const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount,
-			      const AtlrDevice* restrict);
-void atlrDeinitImageView(const VkImageView,
-			 const AtlrDevice* restrict);
-AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout,
-				 const AtlrSingleRecordCommandContext* restrict);
+VkImageView atlrInitImageView(const VkImage, const VkImageViewType, const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount, const AtlrDevice* restrict);
+void atlrDeinitImageView(const VkImageView, const AtlrDevice* restrict);
+AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
 		     const AtlrU32 layerCount,  const VkSampleCountFlagBits, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
 		     const VkMemoryPropertyFlags, const VkImageViewType, const VkImageAspectFlags,
 		     const AtlrDevice* restrict);
-AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath,
-				    const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 void atlrDeinitImage(const AtlrImage* restrict);
 #ifdef ATLR_DEBUG
 void atlrSetImageName(const AtlrImage* restrict, const char* restrict imageName);
 #endif
+AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath, const AtlrDevice* restrict, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrIsValidDepthImage(const AtlrImage* restrict);
 
 // descriptor.c

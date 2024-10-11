@@ -352,6 +352,9 @@ static AtlrU8 initGooch()
     ATLR_ERROR_MSG("atlrInitMesh returned 0.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetMeshName(&sphereMesh, "Sphere");
+#endif
 
   // index buffer
   const AtlrU16 edgeIndices[] = {0, 1, 2, 2, 1, 3};
@@ -364,6 +367,9 @@ static AtlrU8 initGooch()
     ATLR_ERROR_MSG("Failed to init and stage index buffer.");
     return 0;
   }
+#ifdef ATLR_DEBUG
+  atlrSetBufferName(&edgeDetectIndexBuffer, "Edge Detect Index Buffer");
+#endif
 
   if(!atlrInitPerspectiveCameraHostGLFW(&camera, MAX_FRAMES_IN_FLIGHT, 45, 0.1f, 100.0f, &device))
   {
