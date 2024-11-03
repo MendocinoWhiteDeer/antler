@@ -8,7 +8,7 @@ function (compile_shader input_file output_file)
 endfunction()
 
 set(SAMPLES_DIR "${PROJECT_SOURCE_DIR}/samples")
-set(SAMPLES_BIN_DIR "${CMAKE_BINARY_DIR}/samples")
+set(SAMPLES_BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 file(MAKE_DIRECTORY "${SAMPLES_BIN_DIR}")
 
 add_subdirectory(add-vectors)
