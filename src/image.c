@@ -52,7 +52,7 @@ VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice physical, const
   return getSupportedImageFormat(physical, sizeof(depthFormatChoices) / sizeof(VkFormat), depthFormatChoices, tiling, features);
 }
 
-VkImageView atlrInitImageView(const VkImage image, const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspects, const AtlrU32 layerCount, const AtlrDevice* restrict device)
+VkImageView atlrInitImageView(const VkImage image, const VkImageViewType viewType, const VkFormat format, const VkImageAspectFlags aspects, const AtlrU32 levelCount, const AtlrU32 layerCount, const AtlrDevice* restrict device)
 {
   const VkImageViewCreateInfo imageViewInfo =
   {
@@ -73,7 +73,7 @@ VkImageView atlrInitImageView(const VkImage image, const VkImageViewType viewTyp
     {
       .aspectMask = aspects,
       .baseMipLevel = 0,
-      .levelCount = 1,
+      .levelCount = levelCount,
       .baseArrayLayer = 0,
       .layerCount = layerCount
     }
@@ -115,7 +115,7 @@ AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageL
     {
       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
       .baseMipLevel = 0,
-      .levelCount = 1,
+      .levelCount = image->mipLevels,
       .baseArrayLayer = 0,
       .layerCount = image->layerCount
     }
@@ -154,7 +154,7 @@ AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict image, const VkImageL
 }
 
 AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU32 height,
-		     const AtlrU32 layerCount, const VkSampleCountFlagBits samples, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage,
+		     const AtlrU32 mipLevels, const AtlrU32 layerCount, const VkSampleCountFlagBits samples, const VkFormat format, const VkImageTiling tiling, const VkImageUsageFlags usage,
 		     const VkMemoryPropertyFlags properties, const VkImageViewType viewType, const VkImageAspectFlags aspects,
 		     const AtlrDevice* restrict device)
 {
@@ -173,7 +173,7 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
       .height = height,
       .depth = 1
     },
-    .mipLevels = 1,
+    .mipLevels = mipLevels,
     .arrayLayers = layerCount,
     .samples = samples,
     .tiling = tiling,
@@ -191,6 +191,7 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
   image->format = format;
   image->width = width;
   image->height = height;
+  image->mipLevels = mipLevels;
   image->layerCount = layerCount;
 
   VkMemoryRequirements memoryRequirements;
@@ -220,7 +221,7 @@ AtlrU8 atlrInitImage(AtlrImage* restrict image, const AtlrU32 width, const AtlrU
     return 0;
   }
 
-  VkImageView imageView = atlrInitImageView(image->image, viewType, format, aspects, layerCount, device);
+  VkImageView imageView = atlrInitImageView(image->image, viewType, format, aspects, mipLevels, layerCount, device);
   if (imageView == VK_NULL_HANDLE)
   {
     ATLR_ERROR_MSG("atlrInitImageView returned VK_NULL_HANDLE.");
@@ -269,6 +270,7 @@ void atlrSetImageName(const AtlrImage* restrict image, const char* restrict imag
 }
 #endif
 
+// load texture from file, generates mipmaps at runtime
 AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath, const AtlrDevice* restrict device, const AtlrSingleRecordCommandContext* restrict commandContext)
 {
   int width, height, channels;
@@ -280,15 +282,19 @@ AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath, 
   }
 
   const VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-  const VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  const VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  if (!atlrInitImage(image, width, height, 1, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL, usage, memoryProperties, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, device))
+  
+  // integer floor of log base 2 of max dimension plus 1
+  const AtlrU32 mipLevels = 32 - __builtin_clz(width > height ? width : height);
+  
+  if (!atlrInitImage(image, width, height, mipLevels, 1, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL, usage, memoryProperties, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
   }
 
-  const AtlrU64 size = width * height * 4;
+  const AtlrU64 size = width * height * 4; // 4 channels
   AtlrBuffer stagingBuffer;
   if (!atlrInitStagingBuffer(&stagingBuffer, size, device))
   {
@@ -305,18 +311,110 @@ AtlrU8 atlrInitImageRgbaTextureFromFile(AtlrImage* image, const char* filePath, 
 
   const VkImageLayout initLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
   const VkImageLayout secondLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  const VkImageLayout thirdLayout  = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   const VkImageLayout finalLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   const VkOffset2D offset          = {.x = 0, .y = 0};
   const VkExtent2D extent          = {.width = width, .height = height};
   if (!atlrTransitionImageLayout(image, initLayout, secondLayout, commandContext) ||
-      !atlrCopyBufferToImage(&stagingBuffer, image, &offset, &extent, commandContext) ||
-      !atlrTransitionImageLayout(image, secondLayout, finalLayout, commandContext))
+      !atlrCopyBufferToImage(&stagingBuffer, image, &offset, &extent, commandContext))
   {
-    ATLR_ERROR_MSG("Failed to stage texture image.");
+    ATLR_ERROR_MSG("Failed to copy buffer to texture image.");
     return 0;
   }
 
   atlrDeinitBuffer(&stagingBuffer);
+
+  VkFormatProperties formatProperties;
+  vkGetPhysicalDeviceFormatProperties(device->physical, format, &formatProperties);
+  if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+  {
+    ATLR_ERROR_MSG("Texture image format doesn not support linear blitting.");
+    return 0;
+  }
+  
+  VkCommandBuffer commandBuffer;
+  if (!atlrBeginSingleRecordCommands(&commandBuffer, commandContext))
+  {
+    ATLR_ERROR_MSG("atlrBeginSingleRecordCommands returned 0.");
+    return 0;
+  }
+
+  VkImageMemoryBarrier barrier =
+  {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .pNext = NULL,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = image->image,
+    .subresourceRange = (VkImageSubresourceRange)
+    {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    }
+  };
+  AtlrU32 mipWidth = width;
+  AtlrU32 mipHeight = height;
+  for (AtlrU32 i = 1; i < mipLevels; i++)
+  {
+    AtlrU32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+    AtlrU32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+    
+    barrier.oldLayout = secondLayout;
+    barrier.newLayout = thirdLayout;
+    barrier.subresourceRange.baseMipLevel = i - 1;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
+
+    const VkImageBlit imageBlit =
+    {
+      .srcSubresource = (VkImageSubresourceLayers)
+      {
+	.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	.mipLevel = i - 1,
+	.baseArrayLayer = 0,
+	.layerCount = 1
+      },
+      .srcOffsets = {{0, 0, 0}, {mipWidth, mipHeight, 1}},
+      .dstSubresource = (VkImageSubresourceLayers)
+      {
+	.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	.mipLevel = i,
+	.baseArrayLayer = 0,
+	.layerCount = 1
+      },
+      .dstOffsets = {{0, 0, 0}, {nextMipWidth, nextMipHeight, 1}}
+    };
+
+    vkCmdBlitImage(commandBuffer, image->image, thirdLayout, image->image, secondLayout, 1, &imageBlit, VK_FILTER_LINEAR);
+
+    barrier.oldLayout = thirdLayout;
+    barrier.newLayout = finalLayout;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
+
+    mipWidth = nextMipWidth;
+    mipHeight = nextMipHeight;
+  }
+
+  barrier.oldLayout = secondLayout;
+  barrier.newLayout = finalLayout;
+  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+
+   vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
+
+  if (!atlrEndSingleRecordCommands(commandBuffer, commandContext))
+  {
+    ATLR_ERROR_MSG("atlrEndSingleRecordCommands returned 0.");
+    return 0;
+  }
 
   return 1;
 }

@@ -59,7 +59,7 @@ void Atlr::ImguiContext::init(const AtlrU8 frameCount, const AtlrSwapchain* rest
   const VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
   const VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   const VkMemoryPropertyFlags memoryProperties =  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  if (!atlrInitImage(&this->fontImage, fontImageWidth, fontImageHeight, 1, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL, usage, memoryProperties, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, device))
+  if (!atlrInitImage(&this->fontImage, fontImageWidth, fontImageHeight, 1, 1, VK_SAMPLE_COUNT_1_BIT, format, VK_IMAGE_TILING_OPTIMAL, usage, memoryProperties, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT, device))
   {
     throw std::runtime_error("atlrInitImage returned 0.");
     return;

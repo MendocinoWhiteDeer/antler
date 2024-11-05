@@ -35,7 +35,7 @@ AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExt
   // color image
   const VkImageUsageFlags colorUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
   const VkImageAspectFlags colorAspect =  VK_IMAGE_ASPECT_COLOR_BIT;
-  if (!atlrInitImage(&canvas->colorImage, extent->width, extent->height, 1, VK_SAMPLE_COUNT_1_BIT, colorFormat, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
+  if (!atlrInitImage(&canvas->colorImage, extent->width, extent->height, 1, 1, VK_SAMPLE_COUNT_1_BIT, colorFormat, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
@@ -53,7 +53,7 @@ AtlrU8 atlrInitOffscreenCanvas(AtlrOffscreenCanvas* restrict canvas, const VkExt
   }
   const VkImageUsageFlags depthUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-  if (!atlrInitImage(&canvas->depthImage, extent->width, extent->height, 1, VK_SAMPLE_COUNT_1_BIT, depthFormat, tiling, depthUsage, memoryProperties, viewType, depthAspect, device))
+  if (!atlrInitImage(&canvas->depthImage, extent->width, extent->height, 1, 1, VK_SAMPLE_COUNT_1_BIT, depthFormat, tiling, depthUsage, memoryProperties, viewType, depthAspect, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;

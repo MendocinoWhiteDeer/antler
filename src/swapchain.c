@@ -1,3 +1,4 @@
+
 /*
 
 This file is part of antler.
@@ -172,7 +173,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   VkImageView* imageViews = malloc(imageCount * sizeof(VkImageView));
   for (AtlrU32 i = 0; i < imageCount; i++)
   {
-    VkImageView imageView = atlrInitImageView(images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, device);
+    VkImageView imageView = atlrInitImageView(images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, device);
     if (imageView == VK_NULL_HANDLE)
     {
       ATLR_ERROR_MSG("atlrInitImageView returned VK_NULL_HANDLE.");
@@ -200,7 +201,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   // color image for multisample anti-aliasing 
   const VkImageUsageFlags colorUsage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
   const VkImageAspectFlags colorAspect =  VK_IMAGE_ASPECT_COLOR_BIT;
-  if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, device->msaaSamples, swapchain->format, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
+  if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, 1, device->msaaSamples, swapchain->format, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;
@@ -218,7 +219,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   }
   const VkImageUsageFlags depthUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-  if (!atlrInitImage(&swapchain->depthImage, extent.width, extent.height, 1, device->msaaSamples, depthFormat, tiling, depthUsage, memoryProperties, viewType, depthAspect, device))
+  if (!atlrInitImage(&swapchain->depthImage, extent.width, extent.height, 1, 1, device->msaaSamples, depthFormat, tiling, depthUsage, memoryProperties, viewType, depthAspect, device))
   {
     ATLR_ERROR_MSG("atlrInitImage returned 0.");
     return 0;

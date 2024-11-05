@@ -169,6 +169,7 @@ typedef struct _AtlrImage
   VkFormat format;
   AtlrU32 width;
   AtlrU32 height;
+  AtlrU32 mipLevels;
   AtlrU32 layerCount;
   
 } AtlrImage;
@@ -346,11 +347,11 @@ void atlrDrawMesh(const AtlrMesh* restrict mesh, const VkCommandBuffer);
 
 // image.c
 VkFormat atlrGetSupportedDepthImageFormat(const VkPhysicalDevice, const VkImageTiling);
-VkImageView atlrInitImageView(const VkImage, const VkImageViewType, const VkFormat, const VkImageAspectFlags, const AtlrU32 layerCount, const AtlrDevice* restrict);
+VkImageView atlrInitImageView(const VkImage, const VkImageViewType, const VkFormat, const VkImageAspectFlags, const AtlrU32 levelCount, const AtlrU32 layerCount, const AtlrDevice* restrict);
 void atlrDeinitImageView(const VkImageView, const AtlrDevice* restrict);
 AtlrU8 atlrTransitionImageLayout(const AtlrImage* restrict, const VkImageLayout oldLayout, const VkImageLayout newLayout, const AtlrSingleRecordCommandContext* restrict);
 AtlrU8 atlrInitImage(AtlrImage* restrict, const AtlrU32 width, const AtlrU32 height,
-		     const AtlrU32 layerCount,  const VkSampleCountFlagBits, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
+		     const AtlrU32 mipLevels, const AtlrU32 layerCount,  const VkSampleCountFlagBits, const VkFormat, const VkImageTiling, const VkImageUsageFlags,
 		     const VkMemoryPropertyFlags, const VkImageViewType, const VkImageAspectFlags,
 		     const AtlrDevice* restrict);
 void atlrDeinitImage(const AtlrImage* restrict);
