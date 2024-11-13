@@ -53,8 +53,10 @@ typedef struct _AtlrQueueFamilyIndices
 {
   AtlrU8 isGraphicsCompute;
   AtlrU8 isPresent;
+  AtlrU8 isComputeNoGraphics;
   AtlrU32 graphicsComputeIndex;
   AtlrU32 presentIndex;
+  AtlrU32 computeNoGraphicsIndex;
   
 } AtlrQueueFamilyIndices;
 
@@ -130,6 +132,7 @@ typedef struct _AtlrDevice
   VkDevice logical;
   VkQueue graphicsComputeQueue;
   VkQueue presentQueue;
+  VkQueue computeNoGraphicsQueue;
   
 } AtlrDevice;
 

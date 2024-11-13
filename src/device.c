@@ -20,10 +20,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
+
+#ifndef ATLR_BUILD_HOOK
+
 // if graphics is supported Vulkan demands at least one family supporting both graphics and compute 
 // find queue families supporting graphics/compute and present; prioritize any family with both
 static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, const AtlrInstance* restrict instance, const VkPhysicalDevice physical)
 {
+  memset(indices, 0, sizeof(AtlrQueueFamilyIndices));
+  
   AtlrU32 count = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(physical, &count, NULL);
   VkQueueFamilyProperties* properties = malloc(count * sizeof(VkQueueFamilyProperties));
@@ -32,7 +37,10 @@ static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, con
   for (AtlrU8 i = 0; i < count; i++)
   {
     const VkQueueFlags queueFlags = properties[i].queueFlags;
-    const VkBool32 graphicsComputeSupport = (queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFlags & VK_QUEUE_COMPUTE_BIT);
+    const VkBool32 graphicsSupport = queueFlags & VK_QUEUE_GRAPHICS_BIT;
+    const VkBool32 computeSupport = queueFlags & VK_QUEUE_COMPUTE_BIT;
+    const VkBool32 graphicsComputeSupport = graphicsSupport && computeSupport;
+    
     VkBool32 presentSupport = 0;
     if (instance->surface != VK_NULL_HANDLE)
       vkGetPhysicalDeviceSurfaceSupportKHR(physical, i, instance->surface, &presentSupport);
@@ -54,6 +62,21 @@ static void initQueueFamilyIndices(AtlrQueueFamilyIndices* restrict indices, con
     {
       indices->isPresent = 1;
       indices->presentIndex = i;
+    }
+  }
+
+  for (AtlrU8 i = 0; i < count; i++)
+  {
+    const VkQueueFlags queueFlags = properties[i].queueFlags;
+    const VkBool32 graphicsSupport = queueFlags & VK_QUEUE_GRAPHICS_BIT;
+    const VkBool32 computeSupport = queueFlags & VK_QUEUE_COMPUTE_BIT;
+    const VkBool32 computeNoGraphicsSupport = !graphicsSupport && computeSupport;
+
+    if (computeNoGraphicsSupport)
+    {
+      indices->isComputeNoGraphics = 1;
+      indices->computeNoGraphicsIndex= i;
+      break;
     }
   }
 
@@ -246,7 +269,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     const AtlrU32 versionMajor = VK_VERSION_MAJOR(version);
     const AtlrU32 versionMinor = VK_VERSION_MINOR(version);
 
-    AtlrQueueFamilyIndices queueFamilyIndices;
+    AtlrQueueFamilyIndices queueFamilyIndices = {};
     initQueueFamilyIndices(&queueFamilyIndices, instance, physical);
 
     AtlrSwapchainSupportDetails swapchainSupportDetails = {};
@@ -443,7 +466,7 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     else                                         device->msaaSamples = VK_SAMPLE_COUNT_1_BIT;
   }
 
-  AtlrU32 uniqueQueueFamilyIndices[2];
+  AtlrU32 uniqueQueueFamilyIndices[3];
   const AtlrQueueFamilyIndices* queueFamilyIndices = &device->queueFamilyIndices; 
   AtlrU8 uniqueQueueFamilyIndicesCount = 0;
   if (queueFamilyIndices->isGraphicsCompute)
@@ -451,13 +474,20 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
     uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->graphicsComputeIndex;
     uniqueQueueFamilyIndicesCount++;
   }
-  if (queueFamilyIndices->isPresent &&
-      (!queueFamilyIndices->isGraphicsCompute || (queueFamilyIndices->graphicsComputeIndex != queueFamilyIndices->presentIndex)))
+  if (queueFamilyIndices->isComputeNoGraphics)
+  {
+    uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->computeNoGraphicsIndex;
+    uniqueQueueFamilyIndicesCount++;
+  }
+  const AtlrU8 isPresentUnique1 = !queueFamilyIndices->isGraphicsCompute || (queueFamilyIndices->graphicsComputeIndex != queueFamilyIndices->presentIndex);
+  const AtlrU8 isPresentUnique2 = !queueFamilyIndices->isComputeNoGraphics || (queueFamilyIndices->computeNoGraphicsIndex != queueFamilyIndices->presentIndex);
+  if (queueFamilyIndices->isPresent && isPresentUnique1 && isPresentUnique2)
   {
     uniqueQueueFamilyIndices[uniqueQueueFamilyIndicesCount] = queueFamilyIndices->presentIndex;
     uniqueQueueFamilyIndicesCount++;
   }
-  VkDeviceQueueCreateInfo queueInfos[2];
+  
+  VkDeviceQueueCreateInfo queueInfos[3];
   const float priority = 1.0f;
   for (AtlrU32 i = 0; i < uniqueQueueFamilyIndicesCount; i++)
     queueInfos[i] = (VkDeviceQueueCreateInfo)
@@ -497,13 +527,37 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
   }
 
   if (queueFamilyIndices->isGraphicsCompute)
+  {
     vkGetDeviceQueue(device->logical, queueFamilyIndices->graphicsComputeIndex, 0, &device->graphicsComputeQueue);
+    atlrLog(ATLR_LOG_INFO, "Device has a queue family with both graphics and compute support.");
+  }
   else
+  {
     device->graphicsComputeQueue = VK_NULL_HANDLE;
+    atlrLog(ATLR_LOG_INFO, "Device doesn't have a queue family with both graphics and compute support.");
+  }
+  
   if (queueFamilyIndices->isPresent)
+  {
     vkGetDeviceQueue(device->logical, queueFamilyIndices->presentIndex, 0, &device->presentQueue);
+    atlrLog(ATLR_LOG_INFO, "Device has a queue family with present support.");
+  }
   else
+  {
     device->presentQueue = VK_NULL_HANDLE;
+    atlrLog(ATLR_LOG_INFO, "Device doesn't have a queue family with present support.");
+  }
+  
+  if (queueFamilyIndices->isComputeNoGraphics)
+  {
+    vkGetDeviceQueue(device->logical, queueFamilyIndices->computeNoGraphicsIndex, 0, &device->computeNoGraphicsQueue);
+    atlrLog(ATLR_LOG_INFO, "Device has a queue family with compute support and no graphics support.");
+  }
+  else
+  {
+    device->computeNoGraphicsQueue = VK_NULL_HANDLE;
+    atlrLog(ATLR_LOG_INFO, "Device doesn't have a queue family with compute support and no graphics support.");
+  }
 
   atlrLog(ATLR_LOG_INFO, "Done initializing antler device.");
   return 1;
@@ -538,4 +592,6 @@ void atlrSetObjectName(const VkObjectType objectType, const AtlrU64 objectHandle
     (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(device->instance->instance, "vkSetDebugUtilsObjectNameEXT");
   pfnSetName(device->logical, &nameInfo);
 }
+#endif
+
 #endif

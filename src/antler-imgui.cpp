@@ -358,7 +358,7 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
   
   AtlrU32* vertexCount = &this->vertexCounts[currentFrame];
   AtlrBuffer* vertexBuffer = &this->vertexBuffers[currentFrame];
-  if (drawData->TotalVtxCount != *vertexCount)
+  if ((AtlrU32)drawData->TotalVtxCount != *vertexCount)
   {
     if (*vertexCount)
     {
@@ -366,7 +366,7 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
       atlrDeinitBuffer(vertexBuffer);
     }
     
-    *vertexCount = drawData->TotalVtxCount;
+    *vertexCount = (AtlrU32)drawData->TotalVtxCount;
       
     if (*vertexCount)
     {
@@ -387,7 +387,7 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
 
   AtlrU32* indexCount = &this->indexCounts[currentFrame];
   AtlrBuffer* indexBuffer = &this->indexBuffers[currentFrame];
-  if (drawData->TotalIdxCount != *indexCount)
+  if ((AtlrU32)drawData->TotalIdxCount != *indexCount)
   {
     if (*indexCount)
     {
@@ -395,7 +395,7 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
       atlrDeinitBuffer(indexBuffer);
     }
     
-    *indexCount = drawData->TotalIdxCount;
+    *indexCount = (AtlrU32)drawData->TotalIdxCount;
 
     if (*indexCount)
     {
@@ -417,7 +417,7 @@ void Atlr::ImguiContext::draw(const VkCommandBuffer commandBuffer, const AtlrU8 
   if (!drawData->CmdListsCount) return;
   ImDrawVert* vertices = (ImDrawVert*)vertexBuffer->data;
   ImDrawIdx* indices = (ImDrawIdx*)indexBuffer->data;
-  for (AtlrU32 i = 0; i < drawData->CmdListsCount; i++)
+  for (AtlrU32 i = 0; i < (AtlrU32)drawData->CmdListsCount; i++)
   {
     const ImDrawList* cmdList = drawData->CmdLists[i];
     

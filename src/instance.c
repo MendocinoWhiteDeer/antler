@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "antler.h"
 
+#ifndef ATLR_BUILD_HOOK
+
 static AtlrU8 initAppInfo(VkApplicationInfo* appInfo, const char* name)
 {
   AtlrU32 apiVersion = VK_API_VERSION_1_3;
@@ -403,4 +405,6 @@ void atlrDeinitInstanceHostGLFW(const AtlrInstance* restrict instance)
    
   atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler instance.");
 }
+#endif
+
 #endif
