@@ -143,9 +143,9 @@ static const char* deviceCriterionNames[ATLR_DEVICE_CRITERION_TOT] =
   "VIRTUAL GPU PHYSICAL DEVICE",
   "CPU PHYSICAL DEVICE",
 
-  "QUEUE FAMILY GRAPHICS SUPPORT",
-  "QUEUE FAMILY PRESENT SUPPORT",
-  "QUEUE FAMILY COMPUTE SUPPORT",
+  "SOME QUEUE FAMILY WITH GRAPHICS AND COMPUTE SUPPORT",
+  "SOME QUEUE FAMILY WITH PRESENT SUPPORT",
+  "SOME QUEUE FAMILY WITH COMPUTE AND NO GRAPHICS SUPPORT",
 
   "SWAPCHAIN SUPPORT",
 
@@ -312,14 +312,14 @@ AtlrU8 atlrInitDeviceHost(AtlrDevice* restrict device, const AtlrInstance* restr
 	  criterionValues[j] = (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU);
 	  break;
 
-        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_SUPPORT:
+        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_COMPUTE_SUPPORT:
 	  criterionValues[j] = queueFamilyIndices.isGraphicsCompute;
 	  break;
         case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_PRESENT_SUPPORT:
 	  criterionValues[j] = queueFamilyIndices.isPresent;
 	  break;
-        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_COMPUTE_SUPPORT:
-	  criterionValues[j] = queueFamilyIndices.isGraphicsCompute;
+        case ATLR_DEVICE_CRITERION_QUEUE_FAMILY_COMPUTE_NO_GRAPHICS_SUPPORT:
+	  criterionValues[j] = queueFamilyIndices.isComputeNoGraphics;
 	  break;
 
         case ATLR_DEVICE_CRITERION_SWAPCHAIN_SUPPORT:

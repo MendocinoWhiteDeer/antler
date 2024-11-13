@@ -143,13 +143,9 @@ static AtlrU8 initAddVectors()
   AtlrDeviceCriteria deviceCriteria;
   atlrInitDeviceCriteria(deviceCriteria);
   atlrSetDeviceCriterion(deviceCriteria,
-			 ATLR_DEVICE_CRITERION_QUEUE_FAMILY_COMPUTE_SUPPORT,
+			 ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_COMPUTE_SUPPORT,
 			 ATLR_DEVICE_CRITERION_METHOD_REQUIRED,
 			 0);
-  atlrSetDeviceCriterion(deviceCriteria,
-			 ATLR_DEVICE_CRITERION_INTEGRATED_GPU_PHYSICAL_DEVICE,
-			 ATLR_DEVICE_CRITERION_METHOD_POINT_SHIFT,
-			 10);
   if (!atlrInitDeviceHost(&device, &instance, deviceCriteria))
   {
     ATLR_ERROR_MSG("atlrInitDeviceHost returned 0.");

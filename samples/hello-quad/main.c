@@ -103,7 +103,7 @@ static AtlrU8 initHelloQuad()
   AtlrDeviceCriteria deviceCriteria;
   atlrInitDeviceCriteria(deviceCriteria);
   atlrSetDeviceCriterion(deviceCriteria,
-			 ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_SUPPORT,
+			 ATLR_DEVICE_CRITERION_QUEUE_FAMILY_GRAPHICS_COMPUTE_SUPPORT,
 			 ATLR_DEVICE_CRITERION_METHOD_REQUIRED,
 			 0);
   atlrSetDeviceCriterion(deviceCriteria,
