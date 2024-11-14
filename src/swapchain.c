@@ -198,17 +198,20 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   const VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   const VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
 
-  // color image for multisample anti-aliasing 
-  const VkImageUsageFlags colorUsage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  const VkImageAspectFlags colorAspect =  VK_IMAGE_ASPECT_COLOR_BIT;
-  if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, 1, device->msaaSamples, swapchain->format, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
+  // color image for multisample anti-aliasing
+  if (device->msaaSamples != VK_SAMPLE_COUNT_1_BIT)
   {
-    ATLR_ERROR_MSG("atlrInitImage returned 0.");
-    return 0;
-  }
+    const VkImageUsageFlags colorUsage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    const VkImageAspectFlags colorAspect =  VK_IMAGE_ASPECT_COLOR_BIT;
+    if(!atlrInitImage(&swapchain->colorImage, extent.width, extent.height, 1, 1, device->msaaSamples, swapchain->format, tiling, colorUsage, memoryProperties, viewType, colorAspect, device))
+    {
+      ATLR_ERROR_MSG("atlrInitImage returned 0.");
+      return 0;
+    }
 #ifdef ATLR_DEBUG
-  atlrSetImageName(&swapchain->colorImage, "Swapchain Framebuffer MSAA Color Image");
+    atlrSetImageName(&swapchain->colorImage, "Swapchain Framebuffer MSAA Color Image");
 #endif
+  }
 
   // depth image
   const VkFormat depthFormat = atlrGetSupportedDepthImageFormat(device->physical, tiling);
@@ -230,9 +233,6 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
 
   if (initRenderPass)
   {
-    const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, device->msaaSamples, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    const VkAttachmentDescription colorAttachmentResolve = atlrGetColorAttachmentDescription(swapchain->format, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(device->msaaSamples, device, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     const VkSubpassDependency dependency =
     {
       .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -243,7 +243,21 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
       .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
       .dependencyFlags = 0
     };
-    if (!atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &colorAttachmentResolve, &clearValue, &depthAttachment, 1, &dependency, device))
+    
+    const VkAttachmentDescription depthAttachment = atlrGetDepthAttachmentDescription(device->msaaSamples, device, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    AtlrU8 initRenderPassResult;
+    if (device->msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+    {
+      const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, device->msaaSamples, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+      const VkAttachmentDescription colorAttachmentResolve = atlrGetColorAttachmentDescription(swapchain->format, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+      initRenderPassResult = atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, &colorAttachmentResolve, &clearValue, &depthAttachment, 1, &dependency, device);
+    }
+    else
+    {
+      const VkAttachmentDescription colorAttachment = atlrGetColorAttachmentDescription(swapchain->format, device->msaaSamples, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+      initRenderPassResult = atlrInitRenderPass(&swapchain->renderPass, 1, &colorAttachment, NULL, &clearValue, &depthAttachment, 1, &dependency, device);
+    }
+    if (!initRenderPassResult)
     {
       ATLR_ERROR_MSG("atlrInitRenderPass returned 0.");
       return 0;
@@ -254,21 +268,23 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
   }
 
   VkFramebuffer* framebuffers = malloc(imageCount * sizeof(VkFramebuffer));
+  const AtlrU32 framebufferAttachmentCount = device->msaaSamples == VK_SAMPLE_COUNT_1_BIT ? 2 : 3;
+  VkImageView* framebufferAttachments = malloc(sizeof(VkImageView) * framebufferAttachmentCount);
+  if (device->msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+    framebufferAttachments[0] = swapchain->colorImage.imageView;
+  framebufferAttachments[1] = swapchain->depthImage.imageView;
   for (AtlrU32 i = 0; i < imageCount; i++)
   {
-    const VkImageView framebufferAttachments[3] =
-    {
-      swapchain->colorImage.imageView,
-      swapchain->depthImage.imageView,
-      imageViews[i],
-    };
+    if (device->msaaSamples == VK_SAMPLE_COUNT_1_BIT) framebufferAttachments[0] = imageViews[i];
+    else                                              framebufferAttachments[2] = imageViews[i];
+
     const VkFramebufferCreateInfo framebufferInfo =
     {
       .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
       .pNext = NULL,
       .flags = 0,
       .renderPass = swapchain->renderPass.renderPass,
-      .attachmentCount = 3,
+      .attachmentCount = framebufferAttachmentCount,
       .pAttachments = framebufferAttachments,
       .width = extent.width,
       .height = extent.height,
@@ -285,6 +301,7 @@ AtlrU8 atlrInitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
     atlrSetObjectName(VK_OBJECT_TYPE_FRAMEBUFFER, (AtlrU64)framebuffers[i], framebufferString, device);
 #endif
   }
+  free(framebufferAttachments);
   swapchain->framebuffers = framebuffers;
 
 
@@ -299,18 +316,22 @@ void atlrDeinitSwapchainHostGLFW(AtlrSwapchain* restrict swapchain, const AtlrU8
 
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
     vkDestroyFramebuffer(device->logical, swapchain->framebuffers[i], device->instance->allocator);
+  free(swapchain->framebuffers);
 
   if (deinitRenderPass)
     atlrDeinitRenderPass(&swapchain->renderPass);
 
   atlrDeinitImage(&swapchain->depthImage);
-  atlrDeinitImage(&swapchain->colorImage);
+  if (device->msaaSamples != VK_SAMPLE_COUNT_1_BIT)
+    atlrDeinitImage(&swapchain->colorImage);
   
   for (AtlrU32 i = 0; i < swapchain->imageCount; i++)
     atlrDeinitImageView(swapchain->imageViews[i], device);
   free(swapchain->imageViews);
   free(swapchain->images);
+  
   vkDestroySwapchainKHR(device->logical, swapchain->swapchain, device->instance->allocator);
+  
   atlrLog(ATLR_LOG_INFO, "Done deinitializing Antler swapchain.");
 }
 

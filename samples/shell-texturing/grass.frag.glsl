@@ -44,7 +44,7 @@ layout(set = 2, binding = 0) uniform GrassData
 
 } grass; 
 
-const vec3 lightDir = vec3(0.0f, 0.0f, -1.0f);		
+const vec3 lightDir = vec3(0.0f, 0.0f, 1.0f);		
 const vec3 surfaceColor = vec3(0.1f, 0.9f, 0.1f);
 const float blue = 0.4f;
 const float yellow = 0.4f;
@@ -76,14 +76,14 @@ void main()
 	vec3 coolColor = blue * vec3(0.0f, 0.0f, 1.0f) + 0.1f * surfaceColor;
 	vec3 warmColor = yellow * vec3(1.0f, 1.0f, 0.0f) + 0.74f * surfaceColor;
 
-	float dp = -dot(normal, lightDir);
+	float cosTheta = dot(normal, lightDir);
 	// rudimentary, the higher the grass blade, the less occluded; it is designed to be between -1 and 1
 	// If you do a Taylor expansion of the exponential ratio with respect to the attenuation, the first term is 2 * z - 1, the error = |(z - 1 ) * z * attenuation| <= 0.25 * attenuation for z in [0, 1]
 	// So 4e-2 should be a good threshold value. The attenuation can't be plugged in as zero in the ratio or you are dividing by zero!
 	float occlusion = 2.0f * inUvw.z - 1.0f;
 	if (grass.occlusionAttenuation > 4e-2)
 	   occlusion = 2.0f * (exp(grass.occlusionAttenuation * (inUvw.z - 1.0f)) - 1.0f) / (1.0f - exp(-grass.occlusionAttenuation)) + 1.0f; 
-	float l = mix(occlusion, dp, grass.diffuseContrib);
+	float l = mix(occlusion, cosTheta, grass.diffuseContrib);
 	vec3 color = 0.5f * ((warmColor + coolColor) + l * (warmColor - coolColor));
 
 	outColor = vec4(color, 1.0f);

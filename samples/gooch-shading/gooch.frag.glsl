@@ -33,7 +33,7 @@ layout(location = 0) in vec3 inNormal;
 layout(location = 0) out vec4 outColor;
 
 
-vec3 lightDir = vec3(0.0f, 0.0f, -1.0f);		
+vec3 lightDir = vec3(0.0f, 0.0f, 1.0f);		
 vec3 surfaceColor = vec3(0.8f, 0.2f, 0.2f);
 float blue = 0.4f;
 float yellow = 0.4f;
@@ -45,7 +45,7 @@ void main()
 	vec3 coolColor = blue * vec3(0.0f, 0.0f, 1.0f) + 0.2f * surfaceColor;
 	vec3 warmColor = yellow * vec3(1.0f, 1.0f, 0.0f) + 0.6f * surfaceColor;
 
-	float dot = -dot(normal, lightDir);
-	vec3 color = 0.5f * ((warmColor + coolColor) + dot * (warmColor - coolColor));
+	float cosTheta = dot(normal, lightDir);
+	vec3 color = 0.5f * ((warmColor + coolColor) + cosTheta * (warmColor - coolColor));
 	outColor = vec4(color, 1.0f);
 }

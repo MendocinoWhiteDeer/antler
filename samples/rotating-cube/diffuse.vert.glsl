@@ -45,6 +45,6 @@ void main()
 {
 	outNormal = normalize(mat3(world.normalTransform) * inNormal);
 	vec4 worldPos = world.transform * vec4(inPos, 1.0f);
-	outLightDir = normalize(vec3(worldPos - camera.eyePos));
+	outLightDir = normalize(vec3(camera.eyePos - worldPos));
 	gl_Position = camera.perspective * camera.view * worldPos;
 }
